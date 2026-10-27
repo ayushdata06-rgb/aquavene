@@ -25,12 +25,21 @@ from app.models.models import (  # noqa: F401 — ensure models registered
     WatershedIndicator,
 )
 
+from app.config import get_settings
+
 config = context.config
 
-# Override sqlalchemy.url from environment if available
-db_url = os.environ.get("DATABASE_URL") or os.environ.get("DATABASE_URL_DIRECT")
+# Override sqlalchemy.url from app settings or environment
+settings = get_settings()
+db_url = (
+    os.environ.get("DATABASE_URL_DIRECT")
+    or os.environ.get("DATABASE_URL")
+    or settings.database_url_direct
+    or settings.database_url
+)
 if db_url:
-    config.set_main_option("sqlalchemy.url", db_url)
+    # Escape % for configparser interpolation (e.g. %26 -> %%26)
+    config.set_main_option("sqlalchemy.url", db_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

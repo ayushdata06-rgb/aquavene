@@ -224,7 +224,7 @@ def main():
         print(f"  Created {len(all_indicators)} indicators")
         print(f"  Created scoring run with {len(score_results)} priority scores")
         print(f"  Created {len(datasets)} dataset records")
-        print("\n  ⚠ All data is labelled as DEVELOPMENT FIXTURE")
+        print("\n  [!] All data is labelled as DEVELOPMENT FIXTURE")
         print("  Replace with real data from actual GIS processing.")
 
     except Exception as e:

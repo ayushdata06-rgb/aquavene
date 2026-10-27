@@ -42,12 +42,12 @@ def upgrade() -> None:
         sa.Column("district", sa.String(100)),
         sa.Column("basin_name", sa.String(255)),
         sa.Column("area_sq_km", sa.Float),
-        sa.Column("geom", geoalchemy2.Geometry(geometry_type="MULTIPOLYGON", srid=4326)),
-        sa.Column("centroid", geoalchemy2.Geometry(geometry_type="POINT", srid=4326)),
+        sa.Column("geom", geoalchemy2.Geometry(geometry_type="MULTIPOLYGON", srid=4326, spatial_index=False)),
+        sa.Column("centroid", geoalchemy2.Geometry(geometry_type="POINT", srid=4326, spatial_index=False)),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("idx_watersheds_geom", "watersheds", ["geom"], postgresql_using="gist")
+    op.create_index("idx_watersheds_geom", "watersheds", ["geom"], postgresql_using="gist", if_not_exists=True)
     op.create_index("idx_watersheds_code", "watersheds", ["watershed_code"])
     op.create_index("idx_watersheds_state", "watersheds", ["state"])
     op.create_index("idx_watersheds_district", "watersheds", ["district"])
