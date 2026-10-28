@@ -1,0 +1,471 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  TrendingUp,
+  MapPin,
+  Search,
+  Filter,
+  Download,
+  ArrowRight,
+  ArrowLeft,
+  Info,
+  CheckCircle2,
+  FileSpreadsheet,
+  FileCode,
+  Archive,
+  RotateCcw,
+  Sparkles,
+} from 'lucide-react';
+import { useResearch } from '../context/ResearchContext';
+import { LockedTabBanner } from '../components/LockedTabBanner';
+import { api, FIXTURE_RANKINGS } from '../api/client';
+import { PriorityScore } from '../types';
+
+export const RankingsTab: React.FC = () => {
+  const navigate = useNavigate();
+  const { activeArea, isAreaSelected, selectWatershed, setActiveStep } = useResearch();
+
+  const [rankings, setRankings] = useState<PriorityScore[]>(FIXTURE_RANKINGS);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedState, setSelectedState] = useState<string>('all');
+  const [selectedBasin, setSelectedBasin] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'score' | 'soil' | 'runoff' | 'bare'>('score');
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveStep(2);
+    api.getRankings().then((data) => {
+      if (data && data.length > 0) setRankings(data);
+    });
+  }, []);
+
+  // Filter options
+  const states = useMemo(() => Array.from(new Set(rankings.map((r) => r.state))), [rankings]);
+  const basins = useMemo(() => Array.from(new Set(rankings.map((r) => r.basin_name))), [rankings]);
+
+  const hasActiveFilters = searchTerm !== '' || selectedState !== 'all' || selectedBasin !== 'all' || sortBy !== 'score';
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedState('all');
+    setSelectedBasin('all');
+    setSortBy('score');
+  };
+
+  const filteredAndSortedRankings = useMemo(() => {
+    return rankings
+      .filter((r) => {
+        const matchesSearch =
+          r.watershed_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.watershed_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.district.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesState = selectedState === 'all' || r.state === selectedState;
+        const matchesBasin = selectedBasin === 'all' || r.basin_name === selectedBasin;
+
+        return matchesSearch && matchesState && matchesBasin;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'score') return b.overall_score - a.overall_score;
+        if (sortBy === 'soil') return (b.indicator_breakdown?.erosion_potential || 0) - (a.indicator_breakdown?.erosion_potential || 0);
+        if (sortBy === 'runoff') return (b.indicator_breakdown?.runoff_potential || 0) - (a.indicator_breakdown?.runoff_potential || 0);
+        if (sortBy === 'bare') return (b.indicator_breakdown?.landcover_degradation || 0) - (a.indicator_breakdown?.landcover_degradation || 0);
+        return 0;
+      });
+  }, [rankings, searchTerm, selectedState, selectedBasin, sortBy]);
+
+  const getPriorityBadge = (category: string) => {
+    switch (category) {
+      case 'Critical':
+      case 'critical':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+            Critical
+          </span>
+        );
+      case 'High':
+      case 'high':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+            High
+          </span>
+        );
+      case 'Moderate':
+      case 'medium':
+      case 'moderate':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/40">
+            <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+            Moderate
+          </span>
+        );
+      case 'Low':
+      case 'low':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            Low
+          </span>
+        );
+    }
+  };
+
+  const handleExport = (type: 'csv' | 'geojson' | 'shapefile') => {
+    const dataStr = JSON.stringify(filteredAndSortedRankings, null, 2);
+    let filename = `aquavene_catchments_${new Date().toISOString().slice(0, 10)}`;
+    let mime = 'application/json';
+
+    if (type === 'csv') {
+      const headers = ['Rank,Area Name,Code,District,State,Basin,Urgency Score,Priority Category,Soil Loss Index\n'];
+      const rows = filteredAndSortedRankings.map(
+        (r) => `${r.rank_position},"${r.watershed_name}","${r.watershed_code}","${r.district}","${r.state}","${r.basin_name}",${r.overall_score},"${r.priority_category}",${r.indicator_breakdown?.erosion_potential || 0}\n`
+      );
+      const csvBlob = new Blob([headers.join('') + rows.join('')], { type: 'text/csv' });
+      const url = URL.createObjectURL(csvBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.csv`;
+      a.click();
+      setExportNotice('Spreadsheet (CSV) downloaded successfully!');
+    } else if (type === 'geojson') {
+      const blob = new Blob([dataStr], { type: 'application/geo+json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.geojson`;
+      a.click();
+      setExportNotice('GeoJSON GIS file downloaded successfully!');
+    } else {
+      const blob = new Blob([dataStr], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}_shp_package.json`;
+      a.click();
+      setExportNotice('Shapefile metadata package downloaded successfully!');
+    }
+
+    setTimeout(() => setExportNotice(null), 3500);
+  };
+
+  if (!isAreaSelected) {
+    return (
+      <LockedTabBanner
+        stepNumber={2}
+        stepName="See Priority & Compare Rankings"
+        whatItShows="This step ranks all catchments from most urgent to lowest, showing where your selected area stands and why it qualifies for restoration funding"
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
+      {/* Step Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+        <div>
+          <div className="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+            <span>Step 2 of 4</span>
+            <span>•</span>
+            <span className="text-emerald-400">Restoration Urgency Rankings</span>
+          </div>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight mt-0.5">
+            How Urgent Is This Area?
+          </h1>
+          <p className="text-xs text-slate-400">
+            Compare your selected study area against all regional catchments to justify project funding
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => navigate('/map')}
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to Map
+          </button>
+          <button
+            onClick={() => navigate('/hydrology')}
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all"
+          >
+            <span>Understand the water flow</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Top Summary Card for Active Area */}
+      {activeArea && (
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/40 border border-emerald-500/30 shadow-xl space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                Active Study Area Summary
+              </span>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                {activeArea.name}
+                <span className="text-xs text-slate-400 font-normal">
+                  ({activeArea.district}, {activeArea.state})
+                </span>
+              </h2>
+              <p className="text-xs text-slate-300">
+                This area loses more soil than <strong>85%</strong> of others in the region. Rain runs off quickly here, creating gully erosion.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="text-right">
+                <span className="text-xs text-slate-400 block">Regional Rank</span>
+                <strong className="text-xl font-extrabold text-white">{activeArea.rank_text}</strong>
+              </div>
+              <div className="h-10 w-px bg-slate-800" />
+              <div className="text-right">
+                <span className="text-xs text-slate-400 block">Urgency Score</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-2xl font-black text-white">{activeArea.score}</span>
+                  {getPriorityBadge(activeArea.category)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-800/80 text-xs">
+            <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+              <span className="text-[10px] text-slate-400 block">Catchment Area</span>
+              <strong className="text-white text-sm">{activeArea.area_sq_km} km²</strong>
+            </div>
+            <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+              <span className="text-[10px] text-slate-400 block">Soil Washed Away/Year</span>
+              <strong className="text-rose-400 text-sm">{activeArea.soil_loss_t_ha_yr} t/ha/yr</strong>
+            </div>
+            <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+              <span className="text-[10px] text-slate-400 block">Bare Ground Share</span>
+              <strong className="text-amber-400 text-sm">{activeArea.bare_soil_pct}%</strong>
+            </div>
+            <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+              <span className="text-[10px] text-slate-400 block">Primary Cause</span>
+              <strong className="text-slate-200 text-xs truncate block">{activeArea.main_problem}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Feedback Banner */}
+      {exportNotice && (
+        <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{exportNotice}</span>
+        </div>
+      )}
+
+      {/* Filter and Sorting Bar */}
+      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search area name, code, or district..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          {/* Sort By Dropdown */}
+          <div className="flex items-center space-x-2 text-xs">
+            <span className="text-slate-400 font-medium shrink-0">Sort by:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-emerald-500"
+            >
+              <option value="score">Most urgent first</option>
+              <option value="soil">Most soil lost</option>
+              <option value="runoff">Most rain runoff</option>
+              <option value="bare">Most bare land</option>
+            </select>
+          </div>
+
+          {/* State Filter */}
+          <div className="flex items-center space-x-2 text-xs">
+            <span className="text-slate-400 font-medium shrink-0">State:</span>
+            <select
+              value={selectedState}
+              onChange={(e) => setSelectedState(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-emerald-500"
+            >
+              <option value="all">All States</option>
+              {states.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="px-3 py-2 rounded-xl text-xs text-rose-400 hover:text-rose-300 hover:bg-slate-800 flex items-center gap-1 font-medium"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Clear filters
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Master Catchments Table */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+              <tr>
+                <th className="py-3 px-4"># Rank</th>
+                <th className="py-3 px-4">Catchment Area</th>
+                <th className="py-3 px-4">Code</th>
+                <th className="py-3 px-4">Location</th>
+                <th className="py-3 px-4 text-center">Urgency Score</th>
+                <th className="py-3 px-4 text-center">Priority</th>
+                <th className="py-3 px-4 text-right">Soil Lost/Year</th>
+                <th className="py-3 px-4">Main Cause</th>
+                <th className="py-3 px-4 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {filteredAndSortedRankings.map((ws) => {
+                const isSelected = activeArea?.id === ws.id || activeArea?.code === ws.watershed_code;
+                const soilLoss = Math.round((ws.overall_score / 100) ** 1.8 * 45 * 10) / 10;
+                const mainProblem =
+                  ws.overall_score >= 75
+                    ? 'Steep slopes & bare soil'
+                    : ws.overall_score >= 60
+                    ? 'Monsoon runoff pressure'
+                    : 'Agricultural lowland pooling';
+
+                return (
+                  <tr
+                    key={ws.id}
+                    onClick={() => selectWatershed(ws)}
+                    className={`cursor-pointer transition-colors ${
+                      isSelected ? 'bg-emerald-500/10 hover:bg-emerald-500/15' : 'hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <td className="py-3.5 px-4 font-bold text-white">#{ws.rank_position}</td>
+                    <td className="py-3.5 px-4 font-semibold text-white flex items-center gap-2">
+                      {isSelected && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
+                      <span>{ws.watershed_name}</span>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-slate-400 text-[11px]">{ws.watershed_code}</td>
+                    <td className="py-3.5 px-4 text-slate-300">
+                      {ws.district}, {ws.state}
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-bold text-white text-sm">
+                      {ws.overall_score.toFixed(1)}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">{getPriorityBadge(ws.priority_category)}</td>
+                    <td className="py-3.5 px-4 text-right font-semibold text-rose-300">
+                      {soilLoss} t/ha
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-300 text-[11px]">{mainProblem}</td>
+                    <td className="py-3.5 px-4 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          selectWatershed(ws);
+                          navigate('/map');
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-emerald-400 font-semibold border border-slate-700 hover:border-slate-600 transition-colors"
+                      >
+                        Show on Map
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Export Panel ("Download Report") */}
+      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div className="flex items-center space-x-2">
+          <Download className="w-4 h-4 text-cyan-400" />
+          <h3 className="text-sm font-bold text-white">Download Reports & GIS Files</h3>
+        </div>
+        <p className="text-xs text-slate-400">
+          Export this screening matrix in standard formats for administrative DPR proposals, GIS software, and funding sanctions
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+          <button
+            onClick={() => handleExport('csv')}
+            className="p-3.5 rounded-xl bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 text-left transition-all space-y-1.5 group"
+          >
+            <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Spreadsheet (Excel / CSV)</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Best for budget tables, sorting, and Detailed Project Report (DPR) attachments.
+            </p>
+          </button>
+
+          <button
+            onClick={() => handleExport('geojson')}
+            className="p-3.5 rounded-xl bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 text-left transition-all space-y-1.5 group"
+          >
+            <div className="flex items-center space-x-2 text-xs font-bold text-cyan-400 group-hover:text-cyan-300">
+              <FileCode className="w-4 h-4" />
+              <span>Map File (GeoJSON)</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Best for web GIS maps, Google Earth, and QGIS spatial screening.
+            </p>
+          </button>
+
+          <button
+            onClick={() => handleExport('shapefile')}
+            className="p-3.5 rounded-xl bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 text-left transition-all space-y-1.5 group"
+          >
+            <div className="flex items-center space-x-2 text-xs font-bold text-amber-400 group-hover:text-amber-300">
+              <Archive className="w-4 h-4" />
+              <span>Shapefile Package (.zip)</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Standard format required by government GIS departments and Jal Shakti portals.
+            </p>
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom Step Forward Button */}
+      <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+        <button
+          onClick={() => navigate('/map')}
+          className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium flex items-center gap-1.5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Map
+        </button>
+
+        <button
+          onClick={() => navigate('/hydrology')}
+          className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all transform hover:-translate-y-0.5"
+        >
+          <span>Understand the water flow</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+

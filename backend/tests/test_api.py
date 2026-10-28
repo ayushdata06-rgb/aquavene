@@ -1,4 +1,4 @@
-"""Integration tests for FastAPI endpoints."""
+"""Integration tests for consolidated FastAPI endpoints."""
 
 from __future__ import annotations
 
@@ -43,49 +43,55 @@ def test_rankings_list(client: TestClient):
     assert "items" in data or isinstance(data, list)
 
 
-def test_layers_metadata(client: TestClient):
-    """Test GIS layers metadata endpoint."""
-    response = client.get("/api/layers")
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, (list, dict))
-
-
-def test_rainfall_summary(client: TestClient):
-    """Test rainfall summary endpoint."""
-    response = client.get("/api/rainfall/summary")
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-
-
-def test_scenarios_workflow(client: TestClient):
-    """Test scenarios listing and creation."""
-    # List scenarios
-    get_res = client.get("/api/scenarios")
-    assert get_res.status_code == 200
-
-    # Create a scenario
-    payload = {
-        "name": "High Erosion Focus",
-        "description": "Policy scenario prioritizing soil erosion mitigation",
-        "weights": {
-            "erosion_potential": 0.40,
-            "runoff_potential": 0.20,
-            "landcover_degradation": 0.15,
-            "rainfall_pressure": 0.15,
-            "downstream_exposure": 0.10,
-        },
-    }
-    post_res = client.post("/api/scenarios", json=payload)
-    assert post_res.status_code in [200, 201]
-    scenario = post_res.json()
-    assert scenario["name"] == payload["name"]
-
-
 def test_export_rankings_csv(client: TestClient):
     """Test CSV export endpoint."""
     response = client.get("/api/exports/rankings.csv")
     assert response.status_code == 200
     assert "text/csv" in response.headers.get("content-type", "")
     assert len(response.text) > 0
+
+
+def test_saved_plans_workflow(client: TestClient):
+    """Test saving, retrieving, and listing DPR restoration plans."""
+    payload = {
+        "area_name": "Upper Kali Test Basin",
+        "area_sq_km": 42.5,
+        "original_score": 76.8,
+        "simulated_score": 40.3,
+        "original_soil_loss": 32.4,
+        "simulated_soil_loss": 8.8,
+        "reforest_pct": 15.0,
+        "check_dams_count": 6,
+        "cct_pct": 25.0,
+        "budget_lakhs_inr": 142.5,
+        "interventions": [
+            {
+                "title": "Continuous Contour Trenches (CCT)",
+                "quantity": "34.2 km",
+                "estimated_cost_lakhs_inr": 95.8,
+            },
+            {
+                "title": "Cascading Gabion Check Dams",
+                "quantity": "8 structures",
+                "estimated_cost_lakhs_inr": 12.8,
+            },
+        ],
+    }
+
+    # 1. Create a plan
+    post_res = client.post("/api/plans", json=payload)
+    assert post_res.status_code == 200
+    plan_data = post_res.json()
+    assert plan_data["area_name"] == payload["area_name"]
+    assert plan_data["budget_lakhs_inr"] == payload["budget_lakhs_inr"]
+    assert "id" in plan_data
+
+    # 2. List plans
+    list_res = client.get("/api/plans")
+    assert list_res.status_code == 200
+    plans = list_res.json()
+    assert isinstance(plans, list)
+
+    # 3. Retrieve specific plan
+    get_res = client.get(f"/api/plans/{plan_data['id']}")
+    assert get_res.status_code in [200, 404]

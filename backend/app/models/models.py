@@ -414,3 +414,33 @@ class ScenarioResult(Base):
             "scenario_id", "watershed_id", name="uq_scenario_watershed"
         ),
     )
+
+
+class SavedPlan(Base):
+    """Certified civil restoration plan and DPR proposal."""
+
+    __tablename__ = "saved_plans"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    watershed_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("watersheds.id", ondelete="SET NULL"), nullable=True
+    )
+    area_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    area_sq_km: Mapped[float] = mapped_column(Float, nullable=False)
+    original_score: Mapped[float] = mapped_column(Float, nullable=False)
+    simulated_score: Mapped[float] = mapped_column(Float, nullable=False)
+    original_soil_loss: Mapped[float] = mapped_column(Float, nullable=False)
+    simulated_soil_loss: Mapped[float] = mapped_column(Float, nullable=False)
+    reforest_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    check_dams_count: Mapped[int] = mapped_column(Integer, default=0)
+    cct_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    budget_lakhs_inr: Mapped[float] = mapped_column(Float, nullable=False)
+    interventions_json: Mapped[Optional[list]] = mapped_column(JSONB, default=list)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+
+    watershed = relationship("Watershed")

@@ -15,14 +15,10 @@ from app.api import (
     datasets,
     exports,
     health,
-    indicators,
-    layers,
+    plans,
+    predict,
     processing,
-    rainfall,
     rankings,
-    reports,
-    scenarios,
-    terrain,
     watersheds,
 )
 
@@ -30,9 +26,7 @@ from app.api import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle."""
-    # Startup: nothing heavy — DB pool opens lazily
     yield
-    # Shutdown: clean up if needed
 
 
 def create_app() -> FastAPI:
@@ -41,7 +35,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="AquaVane API",
         description="Watershed Restoration Prioritisation & Decision-Support Platform",
-        version="0.1.0",
+        version="2.0.0",
         lifespan=lifespan,
         default_response_class=ORJSONResponse,
         docs_url="/docs",
@@ -57,21 +51,17 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Register routers
+    # Register Clean Core Routers
     app.include_router(health.router, prefix="/api", tags=["Health"])
     app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
-    app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+    app.include_router(predict.router, prefix="/api/predict", tags=["ML Prediction Suite"])
     app.include_router(watersheds.router, prefix="/api/watersheds", tags=["Watersheds"])
     app.include_router(rankings.router, prefix="/api", tags=["Rankings"])
-    app.include_router(indicators.router, prefix="/api", tags=["Indicators"])
-    app.include_router(layers.router, prefix="/api", tags=["Layers"])
-    app.include_router(rainfall.router, prefix="/api/rainfall", tags=["Rainfall"])
-    app.include_router(terrain.router, prefix="/api/terrain", tags=["Terrain"])
-    app.include_router(datasets.router, prefix="/api/datasets", tags=["Datasets"])
-    app.include_router(processing.router, prefix="/api/processing-jobs", tags=["Processing"])
-    app.include_router(scenarios.router, prefix="/api/scenarios", tags=["Scenarios"])
-    app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
+    app.include_router(plans.router, prefix="/api/plans", tags=["Restoration Plans & DPRs"])
     app.include_router(exports.router, prefix="/api/exports", tags=["Exports"])
+    app.include_router(datasets.router, prefix="/api/datasets", tags=["Datasets"])
+    app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+    app.include_router(processing.router, prefix="/api/processing-jobs", tags=["Processing"])
 
     return app
 

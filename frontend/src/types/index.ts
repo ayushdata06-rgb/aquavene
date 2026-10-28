@@ -159,3 +159,124 @@ export interface AuthStatus {
   supabase_configured: boolean;
   jwt_algorithm: string;
 }
+
+export interface SHAPDriver {
+  feature_key: string;
+  label: string;
+  description: string;
+  impact_pts: number;
+  is_aggravating: boolean;
+}
+
+export interface HydrographPoint {
+  day: string;
+  rainfall_mm: number;
+  discharge_m3s: number;
+  flood_alert_threshold: number;
+}
+
+export interface PrescribedIntervention {
+  title: string;
+  type: 'contour_trenching' | 'check_dams' | 'farm_ponds' | 'afforestation';
+  quantity: string;
+  target_zone: string;
+  estimated_cost_lakhs_inr: number;
+  impact: string;
+  coordinates: [number, number];
+}
+
+export interface AOIPredictionResult {
+  status: string;
+  name?: string;
+  score: number;
+  category: PriorityCategory;
+  badge_color: 'red' | 'orange' | 'yellow' | 'green';
+  soil_loss_t_ha_yr: number;
+  features: {
+    centroid: [number, number];
+    bounds: [number, number, number, number];
+    area_sq_km: number;
+    mean_slope_deg: number;
+    max_slope_deg: number;
+    elevation_relief_m: number;
+    twi_index: number;
+    bare_soil_pct: number;
+    tree_cover_pct: number;
+    cropland_pct: number;
+    builtup_pct: number;
+    rainfall_30d_mm: number;
+    rainfall_anomaly_pct: number;
+    monsoon_storm_p95: number;
+    drainage_density_km_km2: number;
+    stream_order_max: number;
+    dist_to_major_river_km: number;
+  };
+  shap_drivers: SHAPDriver[];
+  hydrograph: HydrographPoint[];
+  peak_discharge_m3s: number;
+  prescribed_interventions: PrescribedIntervention[];
+  estimated_budget_lakhs_inr: number;
+}
+
+export interface CounterfactualSimulationResult {
+  simulated_score: number;
+  simulated_category: PriorityCategory;
+  score_delta: number;
+  reduction_pct: number;
+  new_soil_loss_t_ha_yr: number;
+  modified_features: {
+    bare_soil_pct: number;
+    tree_cover_pct: number;
+    effective_slope_deg: number;
+  };
+}
+
+
+export interface ActiveArea {
+  id: string;
+  name: string;
+  code: string;
+  district: string;
+  state: string;
+  area_sq_km: number;
+  score: number;
+  category: PriorityCategory;
+  soil_loss_t_ha_yr: number;
+  bare_soil_pct: number;
+  plant_cover_pct: number;
+  relief_m: number;
+  slope_deg: number;
+  rainfall_30d_mm: number;
+  rainfall_anomaly_pct: number;
+  monsoon_storm_p95: number;
+  drainage_density: number;
+  rank_text: string;
+  main_problem: string;
+  bounds: [number, number, number, number] | null;
+  coordinates: [number, number][];
+  fourPoints: Array<{ id: number; name: string; lat: number; lon: number }>;
+  hydrograph: HydrographPoint[];
+  peak_discharge_m3s: number;
+  flood_alert_days: number;
+  most_risky_day: string;
+  prescribed_interventions: PrescribedIntervention[];
+  estimated_budget_lakhs_inr: number;
+  shap_drivers: SHAPDriver[];
+  isCustom: boolean;
+}
+
+export interface SavedPlan {
+  id: string;
+  area_name: string;
+  date: string;
+  area_sq_km: number;
+  original_score: number;
+  simulated_score: number;
+  original_soil_loss: number;
+  simulated_soil_loss: number;
+  reforest_pct: number;
+  check_dams_count: number;
+  cct_pct: number;
+  budget_lakhs_inr: number;
+  interventions: PrescribedIntervention[];
+}

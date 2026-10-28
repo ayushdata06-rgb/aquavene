@@ -114,6 +114,10 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         .scalar()
     )
 
+    # Map moderate alias for category counts
+    dist_with_moderate = dict(category_counts)
+    dist_with_moderate["moderate"] = category_counts.get("medium", 0)
+
     return DashboardSummary(
         total_watersheds=total_watersheds,
         critical_count=category_counts.get("critical", 0),
@@ -121,10 +125,13 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         medium_count=category_counts.get("medium", 0),
         low_count=category_counts.get("low", 0),
         total_datasets=total_datasets,
+        datasets_count=total_datasets,
         last_scoring_date=latest_run.completed_at if latest_run else None,
         last_processing_date=last_processing,
         category_distribution=category_counts,
+        priority_distribution=dist_with_moderate,
         top_watersheds=top_items,
         recent_jobs=recent_jobs,
         data_warnings=warnings,
+        warnings=warnings,
     )

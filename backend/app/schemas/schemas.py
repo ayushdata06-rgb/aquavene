@@ -291,12 +291,15 @@ class DashboardSummary(BaseModel):
     medium_count: int
     low_count: int
     total_datasets: int
+    datasets_count: Optional[int] = None
     last_scoring_date: Optional[datetime] = None
     last_processing_date: Optional[datetime] = None
     category_distribution: Dict[str, int]
+    priority_distribution: Optional[Dict[str, int]] = None
     top_watersheds: List[RankingEntry]
     recent_jobs: List[ProcessingJobResponse]
     data_warnings: List[str]
+    warnings: Optional[List[str]] = None
 
 
 # ---- Report ----
