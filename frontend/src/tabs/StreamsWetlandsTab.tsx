@@ -12,6 +12,9 @@ import {
   Maximize2,
   Anchor,
   Layers,
+  Sparkles,
+  Info,
+  ShieldAlert,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
 
@@ -20,6 +23,8 @@ export const StreamsWetlandsTab: React.FC = () => {
   const { activeArea, sliderValues, setSliderValues } = useResearch();
 
   const [floodplainSetbackMeters, setFloodplainSetbackMeters] = useState<number>(30);
+  const [crossSectionView, setCrossSectionView] = useState<'restored' | 'degraded'>('restored');
+
   const p2 = activeArea?.restoration_plan?.pillar2_stream_wetland;
   const p3 = activeArea?.restoration_plan?.pillar3_barriers_fish;
 
@@ -29,6 +34,7 @@ export const StreamsWetlandsTab: React.FC = () => {
   // Real-time calculated impacts
   const lwdStructuresCount = Math.round(streamRepairKm * 3);
   const fishPassageScore = Math.min(95, Math.round(40 + barriersRemoved * 18 + streamRepairKm * 2.5));
+  const unlockedHabitatKm = Math.round(barriersRemoved * 4.2 + streamRepairKm * 0.8);
   const floodDissipationM3 = Math.round(floodplainSetbackMeters * streamRepairKm * 450);
   const totalCostLakhs = Math.round((streamRepairKm * 1.80 + barriersRemoved * 1.25) * 10) / 10;
 
@@ -54,7 +60,7 @@ export const StreamsWetlandsTab: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/land-roads')}
-              className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition-all shadow-lg shadow-brand-600/30 flex items-center gap-2"
+              className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all shadow-lg shadow-cyan-600/30 flex items-center gap-2"
             >
               Next: Farms & Roads
               <ArrowRight className="h-4 w-4" />
@@ -63,12 +69,111 @@ export const StreamsWetlandsTab: React.FC = () => {
         </div>
       </div>
 
+      {/* Interactive Visual Channel Cross-Section Inspection Banner */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+              <Layers className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">Stream Bank Hydraulic Cross-Section</h2>
+              <p className="text-xs text-slate-400">Comparing incised vertical erosion cut-banks vs. bioengineered stable banks</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setCrossSectionView('degraded')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                crossSectionView === 'degraded'
+                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Before: Incised Channel
+            </button>
+            <button
+              onClick={() => setCrossSectionView('restored')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                crossSectionView === 'restored'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              After: Restored Bio-Bank
+            </button>
+          </div>
+        </div>
+
+        {crossSectionView === 'restored' ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/30 space-y-2">
+              <div className="text-emerald-400 font-bold text-xs uppercase flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Gentle 2:1 Sloped Bank</span>
+              </div>
+              <p className="text-slate-300 text-xs leading-relaxed">
+                Re-graded stream banks lined with woven coconut coir geotextiles and live willow/jamun cuttings. Roots bind topsoil down into the water table.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-cyan-500/30 space-y-2">
+              <div className="text-cyan-400 font-bold text-xs uppercase flex items-center gap-1.5">
+                <Anchor className="w-4 h-4" />
+                <span>Large Woody Debris (LWD) Jams</span>
+              </div>
+              <p className="text-slate-300 text-xs leading-relaxed">
+                Felled logs and root-wads keyed into banks deflect high-velocity center flow, creating cool, deep resting pools for spawning fish during monsoons.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-sky-500/30 space-y-2">
+              <div className="text-sky-400 font-bold text-xs uppercase flex items-center gap-1.5">
+                <Waves className="w-4 h-4" />
+                <span>Connected Riparian Floodplain</span>
+              </div>
+              <p className="text-slate-300 text-xs leading-relaxed">
+                Removing artificial berms allows high storm flows to spill into natural floodplain wetlands, filtering silt and reducing downstream flood peak by 42%.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-rose-500/30 space-y-2">
+              <div className="text-rose-400 font-bold text-xs uppercase flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Vertical Incised Cut-Banks</span>
+              </div>
+              <p className="text-slate-300 text-xs leading-relaxed">
+                Stormwater cuts deep trenches with vertical 90° banks. During heavy rains, chunks of farmland crumble directly into the river channel.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-amber-500/30 space-y-2">
+              <div className="text-amber-400 font-bold text-xs uppercase flex items-center gap-1.5">
+                <ShieldAlert className="w-4 h-4" />
+                <span>Warm, Unshaded Water</span>
+              </div>
+              <p className="text-slate-300 text-xs leading-relaxed">
+                Stripped stream corridors experience direct solar heating (+3.5°C), depleting dissolved oxygen and killing native fingerlings and macroinvertebrates.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-rose-500/30 space-y-2">
+              <div className="text-rose-400 font-bold text-xs uppercase flex items-center gap-1.5">
+                <Waves className="w-4 h-4" />
+                <span>Disconnected Floodplain</span>
+              </div>
+              <p className="text-slate-300 text-xs leading-relaxed">
+                Channelized streams trap all flood velocity within the ditch, shooting torrents of mud and debris downstream into bridges and culverts.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Grid: Bio-Stabilization + Barrier Removal + Floodplain Reconnection */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (2 Cols): Levers & Bio-engineering */}
         <div className="lg:col-span-2 space-y-6">
           {/* Lever 1: Bio-Engineered Bank Armoring & Large Woody Debris */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
@@ -118,7 +223,7 @@ export const StreamsWetlandsTab: React.FC = () => {
           </div>
 
           {/* Lever 2: Barrier Removal & Culvert Retrofit */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
@@ -151,17 +256,21 @@ export const StreamsWetlandsTab: React.FC = () => {
               </div>
             </div>
 
-            {/* Fish Passage Health Gauge */}
-            <div className="mt-6 pt-5 border-t border-slate-800">
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="text-slate-300 font-semibold">Fish Passage & Habitat Connectivity Score</span>
-                <span className="text-indigo-400 font-extrabold text-sm">{fishPassageScore} / 100</span>
+            {/* Fish Passage Health Gauge & Habitat Unlocked */}
+            <div className="mt-6 pt-5 border-t border-slate-800 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-300 font-semibold">Fish Passage Connectivity Score</span>
+                <span className="text-indigo-400 font-extrabold text-sm font-mono">{fishPassageScore} / 100</span>
               </div>
               <div className="h-2.5 rounded-full bg-slate-800 overflow-hidden">
                 <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: `${fishPassageScore}%` }} />
               </div>
-              <p className="text-xs text-slate-400 mt-2">
-                Migratory target: {p3?.migratory_species_benefited || 'Mahseer (Tor tor), Freshwater Eels, and indigenous stream barbs'}
+              <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                <span>Upstream Habitat Unlocked:</span>
+                <strong className="text-emerald-400 font-mono text-sm">{unlockedHabitatKm} km free-flowing river</strong>
+              </div>
+              <p className="text-xs text-slate-400">
+                Benefited migratory species: {p3?.migratory_species_benefited || 'Golden Mahseer (Tor putitora), Snow Trout, and Deccan stream barbs'}
               </p>
             </div>
           </div>
@@ -169,7 +278,7 @@ export const StreamsWetlandsTab: React.FC = () => {
 
         {/* Right Column: Floodplain Reconnection Details */}
         <div className="space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
             <div className="flex items-center gap-2.5 mb-4">
               <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400">
                 <Maximize2 className="h-5 w-5" />
@@ -214,7 +323,7 @@ export const StreamsWetlandsTab: React.FC = () => {
 
             <button
               onClick={() => navigate('/land-roads')}
-              className="w-full mt-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
+              className="w-full mt-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
             >
               Continue to Tab 6: Farms & Roads
               <ArrowRight className="h-4 w-4" />
@@ -225,4 +334,3 @@ export const StreamsWetlandsTab: React.FC = () => {
     </div>
   );
 };
-

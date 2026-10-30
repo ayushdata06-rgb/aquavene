@@ -239,6 +239,10 @@ export interface HydrologyLayerCollection {
         name: string;
         strahler_order: number;
         flow_rate_m3s: number;
+        velocity_ms?: number;
+        mannings_n?: number;
+        bank_stability?: string;
+        prescription?: string;
         color: string;
         stroke_width: number;
         is_main_stem: boolean;
@@ -264,9 +268,11 @@ export interface HydrologyLayerCollection {
       geometry: { type: string; coordinates: [number, number] };
       properties: {
         title: string;
-        type: string;
+        type?: string;
         action: string;
         fish_impact: string;
+        head_drop_m?: number;
+        fish_status?: string;
       };
     }>;
   };
@@ -279,10 +285,38 @@ export interface HydrologyLayerCollection {
         road_name: string;
         surface: string;
         erosion_risk: string;
+        sediment_delivery_t_yr?: number;
+        slope_gradient_pct?: number;
         intervention: string;
       };
     }>;
   };
+  vegetation_zones?: {
+    type: string;
+    features: Array<{
+      type: string;
+      geometry: { type: string; coordinates: any };
+      properties: {
+        name: string;
+        zone_type: string;
+        color: string;
+        fill_opacity: number;
+        bare_soil_pct?: number;
+        tree_cover_pct?: number;
+        cropland_pct?: number;
+        prescription: string;
+      };
+    }>;
+  };
+  elevation_profile?: Array<{
+    station: string;
+    distance_km: number;
+    elevation_m: number;
+    slope_deg: number;
+    flow_m3s: number;
+    lat?: number;
+    lon?: number;
+  }>;
 }
 
 export interface BoQItem {

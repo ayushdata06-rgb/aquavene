@@ -6,7 +6,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-900 text-slate-100 antialiased selection:bg-brand-500 selection:text-white min-h-screen font-sans;
+    @apply bg-slate-950 text-slate-100 antialiased selection:bg-brand-500 selection:text-white min-h-screen font-sans;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 }
@@ -18,52 +18,115 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #090d16;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #1e293b;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #334155;
 }
 
 /* Leaflet dark theme map enhancements */
 .leaflet-container {
-  background-color: #090d16 !important;
+  background-color: #060911 !important;
   font-family: inherit;
 }
 
 .leaflet-popup-content-wrapper {
-  background-color: #1e293b !important;
+  background-color: #0f172a !important;
   color: #f8fafc !important;
-  border-radius: 0.75rem !important;
+  border-radius: 0.85rem !important;
   border: 1px solid #334155;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6) !important;
+  padding: 4px;
 }
 
 .leaflet-popup-tip {
-  background-color: #1e293b !important;
+  background-color: #0f172a !important;
 }
 
 .leaflet-tooltip {
-  background-color: #0f172a !important;
+  background-color: #090d16 !important;
   color: #f8fafc !important;
   border: 1px solid #334155 !important;
   border-radius: 0.5rem !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
   font-family: inherit !important;
   padding: 4px 8px !important;
 }
 
-.leaflet-tooltip-top:before,
-.leaflet-tooltip-bottom:before,
-.leaflet-tooltip-left:before,
-.leaflet-tooltip-right:before {
-  border-top-color: #0f172a !important;
-  border-bottom-color: #0f172a !important;
-  border-left-color: #0f172a !important;
-  border-right-color: #0f172a !important;
+/* High-Performance SVG Animated Stream Flow */
+@keyframes flowDash {
+  from {
+    stroke-dashoffset: 40px;
+  }
+  to {
+    stroke-dashoffset: 0px;
+  }
+}
+
+@keyframes reverseFlowDash {
+  from {
+    stroke-dashoffset: 0px;
+  }
+  to {
+    stroke-dashoffset: 40px;
+  }
+}
+
+.stream-flowing {
+  stroke-dasharray: 8 6;
+  animation: reverseFlowDash 1.2s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.7));
+}
+
+.stream-flowing-trunk {
+  stroke-dasharray: 12 6;
+  animation: reverseFlowDash 0.85s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(3, 105, 161, 0.8));
+}
+
+.stream-flowing-surging {
+  stroke-dasharray: 14 6;
+  animation: reverseFlowDash 0.45s linear infinite;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.95));
+}
+
+.station-pulse-pin {
+  animation: ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.dirt-road-eroding {
+  stroke-dasharray: 6 6;
+  animation: reverseFlowDash 2.5s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.6));
+}
+
+/* Custom Marker Pins & Floating Badges */
+.custom-corner-pin {
+  transition: transform 0.15s ease-out;
+}
+.custom-corner-pin:hover {
+  transform: scale(1.15);
+}
+
+.barrier-pin {
+  animation: bounceSlow 3s ease-in-out infinite;
+}
+
+@keyframes bounceSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.work-pin:hover {
+  transform: scale(1.2);
 }

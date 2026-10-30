@@ -11,6 +11,7 @@ import {
   RotateCw,
   Layers,
   Sparkles,
+  Droplets,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
 
@@ -28,6 +29,7 @@ export const FarmsRoadsTab: React.FC = () => {
   const waterBarsCount = Math.round(roadKm * 6);
   const enrolledHa = Math.round(((activeArea?.area_sq_km || 42.5) * 0.38 * (coverCropPct / 100) * 15.0) * 10) / 10;
   const pondsCount = Math.max(1, Math.min(8, Math.round((activeArea?.area_sq_km || 42.5) * 0.12)));
+  const pondStorageCapacityM3 = pondsCount * 3500;
   const sedimentArrestedTonnes = Math.round(roadKm * 280 + enrolledHa * 18);
   const totalCostLakhs = Math.round((roadKm * 1.10 + enrolledHa * 0.12 + pondsCount * 2.20) * 10) / 10;
 
@@ -53,11 +55,56 @@ export const FarmsRoadsTab: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/simulator')}
-              className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition-all shadow-lg shadow-brand-600/30 flex items-center gap-2"
+              className="px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-lg shadow-orange-600/30 flex items-center gap-2"
             >
               Test in Tab 7: Simulator
               <ArrowRight className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Dirt Road Drainage & Farm Runoff Visualizer Strip */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center gap-2.5 border-b border-slate-800 pb-4">
+          <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
+            <Layers className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-white">Unpaved Road Drainage Engineering</h2>
+            <p className="text-xs text-slate-400">Transforming sediment-bleeding ruts into controlled water-shedding corridors</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div className="p-4 rounded-xl bg-slate-950/80 border border-orange-500/30 space-y-2">
+            <div className="text-orange-400 font-bold uppercase flex items-center gap-1.5">
+              <Shield className="w-4 h-4" />
+              <span>Water Bars (30° Skewed Mounds)</span>
+            </div>
+            <p className="text-slate-300 leading-relaxed">
+              Constructed soil-and-stone berms installed at 40m intervals across steep tracks divert concentrated runoff sideways into grass before it carves deep gullies.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-950/80 border border-amber-500/30 space-y-2">
+            <div className="text-amber-400 font-bold uppercase flex items-center gap-1.5">
+              <RotateCw className="w-4 h-4" />
+              <span>Broad-Based Dips</span>
+            </div>
+            <p className="text-slate-300 leading-relaxed">
+              Gentle 6m long dips in the road surface allow farm vehicles and tractors to pass comfortably while shedding sheetwash water into vegetated ditch turnouts.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/30 space-y-2">
+            <div className="text-emerald-400 font-bold uppercase flex items-center gap-1.5">
+              <Sprout className="w-4 h-4" />
+              <span>Legume Cover Cropping</span>
+            </div>
+            <p className="text-slate-300 leading-relaxed">
+              Post-monsoon planting of Sunnhemp and Cowpea creates living root mats that bind agricultural soil, fix atmospheric nitrogen, and halt field nutrient runoff.
+            </p>
           </div>
         </div>
       </div>
@@ -67,7 +114,7 @@ export const FarmsRoadsTab: React.FC = () => {
         {/* Left Column (2 Cols): Interactive Levers */}
         <div className="lg:col-span-2 space-y-6">
           {/* Lever 1: Dirt Road Sediment & Water Bars */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
@@ -78,7 +125,7 @@ export const FarmsRoadsTab: React.FC = () => {
                   <p className="text-xs text-slate-400">Eject storm water from unpaved tracks into grass filter strips before it hits streams</p>
                 </div>
               </div>
-              <span className="text-sm font-extrabold text-orange-400 bg-orange-500/10 px-3 py-1 rounded-lg border border-orange-500/20">
+              <span className="text-sm font-extrabold text-orange-400 bg-orange-500/10 px-3 py-1 rounded-lg border border-orange-500/20 font-mono">
                 {roadKm} km Road Fixed
               </span>
             </div>
@@ -96,40 +143,36 @@ export const FarmsRoadsTab: React.FC = () => {
               <div className="flex justify-between text-xs text-slate-400">
                 <span>0 km (Active Silt Bleed)</span>
                 <span>5 km (Key Ridge Tracks)</span>
-                <span>15 km (Full Catchment Road Network)</span>
+                <span>15 km (Full Catchment Network)</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mt-6 pt-5 border-t border-slate-800 text-center">
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-xs text-slate-400">Water Bars Installed</div>
+            <div className="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-slate-800">
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                <div className="text-xs text-slate-400">Water Bars & Turnouts</div>
                 <div className="text-lg font-extrabold text-white mt-0.5">{waterBarsCount} units</div>
               </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-xs text-slate-400">Gully Plugs Erected</div>
-                <div className="text-lg font-extrabold text-orange-400 mt-0.5">{Math.round(roadKm * 2)} plugs</div>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-xs text-slate-400">MGNREGA Rate</div>
-                <div className="text-lg font-extrabold text-white mt-0.5">₹{(roadKm * 1.10).toFixed(1)} L</div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                <div className="text-xs text-slate-400">Sediment Kept from Streams</div>
+                <div className="text-lg font-extrabold text-orange-400 mt-0.5">{Math.round(roadKm * 280)} tonnes/yr</div>
               </div>
             </div>
           </div>
 
-          {/* Lever 2: Regenerative Agriculture & Cover Crops */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          {/* Lever 2: Regenerative Cropland Management */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
                   <Sprout className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-white">Farmer Partnerships: Cover Crops & Conservation Tillage</h2>
-                  <p className="text-xs text-slate-400">Enroll farmers in zero-till and legume cover crops to eliminate chemical sheetwash</p>
+                  <h2 className="text-base font-bold text-white">Farmer Regenerative Agriculture Partnership</h2>
+                  <p className="text-xs text-slate-400">Subsidize cover crop seed kits, reduced tillage, and crop rotation</p>
                 </div>
               </div>
-              <span className="text-sm font-extrabold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">
-                {coverCropPct}% Farms Enrolled
+              <span className="text-sm font-extrabold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20 font-mono">
+                {coverCropPct}% Enrolled
               </span>
             </div>
 
@@ -144,60 +187,59 @@ export const FarmsRoadsTab: React.FC = () => {
                 className="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
               />
               <div className="flex justify-between text-xs text-slate-400">
-                <span>0% (Conventional Tillage)</span>
-                <span>50% (High Adoption)</span>
-                <span>100% (100% Regenerative Basin)</span>
+                <span>0% (Bare Post-Harvest)</span>
+                <span>50% (Community Cluster)</span>
+                <span>100% (Watershed-Wide)</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-slate-800">
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-xs text-slate-400">Participating Farmland</div>
-                <div className="text-lg font-extrabold text-white mt-0.5">{enrolledHa} Hectares</div>
-                <div className="text-xs text-emerald-400 mt-1">Sunnhemp & Cowpea nitrogen-fixing rotation</div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                <div className="text-xs text-slate-400">Cropland Protected</div>
+                <div className="text-lg font-extrabold text-emerald-400 mt-0.5">{enrolledHa} ha</div>
               </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-xs text-slate-400">Agricultural Topsoil Held</div>
-                <div className="text-lg font-extrabold text-emerald-400 mt-0.5">~{sedimentArrestedTonnes} Tonnes/yr</div>
-                <div className="text-xs text-slate-400 mt-1">Eliminates field baking and crusting</div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                <div className="text-xs text-slate-400">Soil Carbon Gain</div>
+                <div className="text-lg font-extrabold text-white mt-0.5">+{((coverCropPct / 100) * 0.8).toFixed(2)}% SOC</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Community Farm Ponds & DPR Summary */}
+        {/* Right Column: Community Farm Ponds & Cost Summary */}
         <div className="space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="p-2 rounded-lg bg-teal-500/10 text-teal-400">
-                <RotateCw className="h-5 w-5" />
+              <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400">
+                <Droplets className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-white">Community Percolation Tanks</h2>
-                <p className="text-xs text-slate-400">Harvest surplus runoff in depressions</p>
+                <h2 className="text-base font-bold text-white">Community Percolation Ponds</h2>
+                <p className="text-xs text-slate-400">Groundwater recharge structures</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-              <div className="text-xs text-slate-400">Planned Percolation Tanks</div>
-              <div className="text-2xl font-extrabold text-teal-400">{pondsCount} Units</div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Excavated in mid-reach farm depressions (TWI &gt; 7.0). Stores 1,500 m³ of rainwater per unit, supporting winter rabi supplemental irrigation.
-              </p>
-            </div>
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                <div className="text-xs text-slate-400">Proposed Farm Ponds</div>
+                <div className="text-2xl font-extrabold text-white">{pondsCount} Tanks</div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Total storage capacity: <strong className="text-cyan-400">~{pondStorageCapacityM3.toLocaleString()} m³</strong> for livestock watering and unconfined aquifer recharge.
+                </p>
+              </div>
 
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 mt-4 space-y-2">
-              <div className="text-xs text-slate-400">Total Pillars 4 & 5 Investment</div>
-              <div className="text-2xl font-extrabold text-white">₹{totalCostLakhs} Lakhs</div>
-              <div className="text-[11px] text-slate-500">Government subsidies + MGNREGA road works</div>
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                <div className="text-xs text-slate-400">Total Pillars 4 & 5 Investment</div>
+                <div className="text-2xl font-extrabold text-orange-400">₹{totalCostLakhs} Lakhs</div>
+                <div className="text-[11px] text-slate-500">Includes water bars, seed subsidies, and farm pond excavation</div>
+              </div>
             </div>
 
             <button
               onClick={() => navigate('/simulator')}
-              className="w-full mt-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
+              className="w-full mt-6 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
             >
-              Test Live Impact in Simulator
+              Test Outcomes in Tab 7: Simulator
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -206,4 +248,3 @@ export const FarmsRoadsTab: React.FC = () => {
     </div>
   );
 };
-

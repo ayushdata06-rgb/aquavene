@@ -45,6 +45,7 @@ interface ResearchContextType {
   analyzeFourPointsAOI: (pts?: FourPointMarker[], customName?: string) => Promise<ActiveArea>;
   selectWatershed: (ws: Watershed | PriorityScore) => Promise<void>;
   loadSampleArea: () => void;
+  loadPresetCatchment: (presetKey: string) => Promise<ActiveArea | void>;
   clearActiveArea: () => void;
   sliderValues: RestorationSliders;
   setSliderValues: React.Dispatch<React.SetStateAction<RestorationSliders>>;
@@ -780,6 +781,59 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  const PRESET_CATCHMENTS: Record<string, { name: string; pts: [number, number][] }> = {
+    kali: {
+      name: 'Upper Kali River Catchment (Karnataka)',
+      pts: [
+        [15.22, 74.30],
+        [15.22, 74.42],
+        [15.10, 74.42],
+        [15.10, 74.30],
+      ],
+    },
+    bhagirathi: {
+      name: 'Bhagirathi Headwaters (Garhwal, Uttarakhand)',
+      pts: [
+        [30.48, 78.35],
+        [30.48, 78.50],
+        [30.35, 78.50],
+        [30.35, 78.35],
+      ],
+    },
+    narmada: {
+      name: 'Narmada Valley Gorge (Hoshangabad, MP)',
+      pts: [
+        [22.82, 77.65],
+        [22.82, 77.82],
+        [22.68, 77.82],
+        [22.68, 77.65],
+      ],
+    },
+    palar: {
+      name: 'Palar River Sub-Basin (Vellore, Tamil Nadu)',
+      pts: [
+        [12.98, 79.05],
+        [12.98, 79.22],
+        [12.85, 79.22],
+        [12.85, 79.05],
+      ],
+    },
+  };
+
+  const loadPresetCatchment = async (presetKey: string) => {
+    const preset = PRESET_CATCHMENTS[presetKey] || PRESET_CATCHMENTS.kali;
+    const cornerNames = ['P1 (North-West)', 'P2 (North-East)', 'P3 (South-East)', 'P4 (South-West)'];
+    const pts: FourPointMarker[] = preset.pts.map((coord, idx) => ({
+      id: idx + 1,
+      name: cornerNames[idx],
+      lat: coord[0],
+      lon: coord[1],
+    }));
+
+    setFourPoints(pts);
+    return await analyzeFourPointsAOI(pts, preset.name);
+  };
+
   const loadSampleArea = () => {
     setActiveAreaState(SAMPLE_AREA);
     setFourPoints(SAMPLE_AREA.fourPoints);
@@ -858,6 +912,7 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         analyzeFourPointsAOI,
         selectWatershed,
         loadSampleArea,
+        loadPresetCatchment,
         clearActiveArea,
         sliderValues,
         setSliderValues,

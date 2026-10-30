@@ -18,6 +18,7 @@ export const ActiveAreaBar: React.FC = () => {
     activeArea,
     isAreaSelected,
     loadSampleArea,
+    loadPresetCatchment,
     clearActiveArea,
     setShowOnboarding,
     setShowGlossary,
@@ -126,17 +127,28 @@ export const ActiveAreaBar: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="flex items-center space-x-2">
-            <span className="text-slate-400 flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-              <span>No area drawn yet</span>
+          <div className="flex items-center space-x-1.5">
+            <span className="text-slate-400 flex items-center gap-1.5 text-[11px] hidden lg:inline-flex">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Choose a Basin:</span>
             </span>
             <button
-              onClick={loadSampleArea}
-              className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all"
+              onClick={() => loadPresetCatchment('kali')}
+              className="px-2 py-0.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all"
             >
-              <Sparkles className="w-3 h-3 text-emerald-400" />
-              Load Example
+              🌿 Kali (KA)
+            </button>
+            <button
+              onClick={() => loadPresetCatchment('bhagirathi')}
+              className="px-2 py-0.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all"
+            >
+              🏔️ Bhagirathi (UK)
+            </button>
+            <button
+              onClick={() => loadPresetCatchment('narmada')}
+              className="px-2 py-0.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all"
+            >
+              🌊 Narmada (MP)
             </button>
           </div>
         )}
