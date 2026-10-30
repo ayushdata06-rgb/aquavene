@@ -22,7 +22,9 @@ import {
   WatershedIndicator,
 } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const rawApiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').trim();
+const cleanUrl = rawApiUrl.replace(/\/+$/, '');
+const API_BASE = cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
 
 let currentAuthToken: string | null = null;
 

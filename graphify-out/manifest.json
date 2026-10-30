@@ -366,9 +366,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/client.ts": {
-    "mtime": 1793191203.1055999,
-    "seen": 1793387920.8443894,
-    "ast_hash": "f5ba803ecc4e8c880c322c4e67d8014d",
+    "mtime": 1793395581.8483262,
+    "seen": 1793395615.9899557,
+    "ast_hash": "371564628ef6f83da304d74f3221cd00",
     "semantic_hash": ""
   },
   "frontend/src/components/ActiveAreaBar.tsx": {
@@ -444,8 +444,8 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/MapTab.tsx": {
-    "mtime": 1793394492.0023956,
-    "seen": 1793394561.6849155,
+    "mtime": 1793395173.7616868,
+    "seen": 1793395615.9899788,
     "ast_hash": "5edb33c9b3c6276c6a3251dad6bfebd6",
     "semantic_hash": ""
   },
