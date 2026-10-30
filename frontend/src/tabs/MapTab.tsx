@@ -62,8 +62,8 @@ export const MapTab: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
 
-  // Basemap & Layer states
-  const [activeBasemap, setActiveBasemap] = useState<'satellite' | 'dark' | 'osm' | 'topo'>('satellite');
+  // Basemap & Layer states (100% Free, Zero API Key Leaflet Tile Layers)
+  const [activeBasemap, setActiveBasemap] = useState<'osm' | 'terrain' | 'dark' | 'light'>('osm');
   const [layerOpacity, setLayerOpacity] = useState<number>(90);
   const [showStreams, setShowStreams] = useState<boolean>(true);
   const [showFlowVectors, setShowFlowVectors] = useState<boolean>(true);
@@ -132,10 +132,13 @@ export const MapTab: React.FC = () => {
     barriersLayerRef.current = L.layerGroup().addTo(map);
     worksMarkersRef.current = L.layerGroup().addTo(map);
 
-    // Initial tile layer (Esri Satellite)
+    // Initial tile layer: 100% Free OpenStreetMap (Standard Leaflet, zero API key)
     baseTileLayerRef.current = L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      { maxZoom: 19 }
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+      }
     ).addTo(map);
 
     // Mouse coordinate listener
@@ -161,15 +164,15 @@ export const MapTab: React.FC = () => {
     };
   }, []);
 
-  // Update Basemap Tiles
+  // Update Basemap Tiles (All 100% Free Open-Source Leaflet Layers)
   useEffect(() => {
     if (!mapInstanceRef.current || !baseTileLayerRef.current) return;
 
     const tileConfigs = {
-      satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      osm: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      terrain: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
       dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      topo: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+      light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
     };
 
     baseTileLayerRef.current.setUrl(tileConfigs[activeBasemap]);
@@ -697,10 +700,10 @@ export const MapTab: React.FC = () => {
           </span>
           <div className="grid grid-cols-2 gap-1.5">
             {[
-              { id: 'satellite', label: 'Satellite' },
+              { id: 'osm', label: 'OpenStreetMap' },
+              { id: 'terrain', label: 'Terrain (HOT)' },
               { id: 'dark', label: 'Dark Canvas' },
-              { id: 'osm', label: 'Street Map' },
-              { id: 'topo', label: 'Topographic' },
+              { id: 'light', label: 'Light Canvas' },
             ].map((bm) => (
               <button
                 key={bm.id}

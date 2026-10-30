@@ -372,8 +372,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/ActiveAreaBar.tsx": {
-    "mtime": 1793394029.138854,
-    "seen": 1793394125.8542728,
+    "mtime": 1793394241.4414015,
+    "seen": 1793394561.68487,
     "ast_hash": "ba7c838eb6e3acef7707592954a02635",
     "semantic_hash": ""
   },
@@ -444,9 +444,9 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/MapTab.tsx": {
-    "mtime": 1793393829.530725,
-    "seen": 1793394125.8543231,
-    "ast_hash": "431fa8e2d466787987d1e32ef1486bdd",
+    "mtime": 1793394492.0023956,
+    "seen": 1793394561.6849155,
+    "ast_hash": "5edb33c9b3c6276c6a3251dad6bfebd6",
     "semantic_hash": ""
   },
   "frontend/src/tabs/RankingsTab.tsx": {
@@ -456,14 +456,14 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/SimulatorTab.tsx": {
-    "mtime": 1793394004.0594122,
-    "seen": 1793394125.8543375,
+    "mtime": 1793394242.0056798,
+    "seen": 1793394561.6849284,
     "ast_hash": "81623b5a9f6a8ada2f4a9ec122f1027b",
     "semantic_hash": ""
   },
   "frontend/src/types/index.ts": {
-    "mtime": 1793393655.333159,
-    "seen": 1793394125.8543477,
+    "mtime": 1793394242.2042036,
+    "seen": 1793394561.684937,
     "ast_hash": "ec8e148a46280a2b1320ccb8f9ca066e",
     "semantic_hash": ""
   },
@@ -588,8 +588,8 @@
     "semantic_hash": ""
   },
   "backend/app/services/geo/hydrology_network_service.py": {
-    "mtime": 1793393643.1861687,
-    "seen": 1793394125.854153,
+    "mtime": 1793394241.2817852,
+    "seen": 1793394561.6847231,
     "ast_hash": "3c6e9f00a20fd8f3f8124902c5df5b48",
     "semantic_hash": ""
   },
@@ -606,8 +606,8 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/FarmsRoadsTab.tsx": {
-    "mtime": 1793393959.571015,
-    "seen": 1793394125.8543122,
+    "mtime": 1793394241.653826,
+    "seen": 1793394561.684906,
     "ast_hash": "0fe7622c41530230131fdaad932adc22",
     "semantic_hash": ""
   },
@@ -624,20 +624,20 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/ReforestationTab.tsx": {
-    "mtime": 1793393935.27521,
-    "seen": 1793394125.854334,
+    "mtime": 1793394241.9251623,
+    "seen": 1793394561.684925,
     "ast_hash": "0c970057e3430b2d1e1f8118c3aa5eb7",
     "semantic_hash": ""
   },
   "frontend/src/tabs/StreamsWetlandsTab.tsx": {
-    "mtime": 1793394054.4672785,
-    "seen": 1793394125.8543408,
+    "mtime": 1793394242.0866413,
+    "seen": 1793394561.6849313,
     "ast_hash": "628c90263fce9548c8d01b3f27702773",
     "semantic_hash": ""
   },
   "frontend/src/tabs/TerrainHealthTab.tsx": {
-    "mtime": 1793393872.8842149,
-    "seen": 1793394125.8543446,
+    "mtime": 1793394242.1726627,
+    "seen": 1793394561.684934,
     "ast_hash": "5106590aceea7e3f95288bec767db42b",
     "semantic_hash": ""
   },
