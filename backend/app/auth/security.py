@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import time
 from typing import Any, Dict, Optional
 from jose import JWTError, ExpiredSignatureError, jwt
@@ -42,7 +43,17 @@ def decode_supabase_jwt(
     except ExpiredSignatureError as exc:
         raise ExpiredSignatureError("Token has expired.") from exc
     except JWTError as exc:
-        raise JWTError(f"Could not validate credentials: {str(exc)}") from exc
+        # Fallback: Many Supabase project secrets are base64-encoded strings
+        try:
+            b64_bytes = base64.b64decode(secret)
+            return jwt.decode(
+                token,
+                b64_bytes,
+                algorithms=[algorithm],
+                options=options,
+            )
+        except Exception:
+            raise JWTError(f"Could not validate credentials: {str(exc)}") from exc
 
 
 def parse_user_from_claims(claims: Dict[str, Any]) -> AuthenticatedUser:
@@ -64,11 +75,13 @@ def parse_user_from_claims(claims: Dict[str, Any]) -> AuthenticatedUser:
     avatar_url = user_meta.get("avatar_url") or user_meta.get("picture")
 
     # Determine user role (app_metadata takes precedence, then user_metadata, then root role)
-    role = (
+    raw_role = (
         app_meta.get("role")
         or user_meta.get("role")
-        or claims.get("role", "authenticated")
+        or claims.get("role", "viewer")
     )
+    # Normalize default 'authenticated' to 'viewer' if not specified
+    role = "viewer" if raw_role == "authenticated" else raw_role
 
     # OAuth provider (Google, email, etc.)
     provider = (

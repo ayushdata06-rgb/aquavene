@@ -14,6 +14,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   signInDemo: (role?: string) => void;
+  switchRoleDemo: (role: 'admin' | 'planner' | 'viewer') => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -91,19 +92,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (currentSession?.user) {
       const u = currentSession.user;
       const meta = u.user_metadata || {};
+      const initialRole = meta.role || u.app_metadata?.role || 'planner';
       const mappedUser: AuthUser = {
         id: u.id,
         email: u.email,
-        fullName: meta.full_name || meta.name || (u.email ? u.email.split('@')[0] : 'User'),
+        fullName: meta.full_name || meta.name || (u.email ? u.email.split('@')[0] : 'Watershed Planner'),
         avatarUrl: meta.avatar_url || meta.picture || undefined,
-        role: meta.role || u.app_metadata?.role || 'planner',
+        role: initialRole,
         provider: u.app_metadata?.provider || 'google',
         isAuthenticated: true,
       };
       setUser(mappedUser);
 
-      // Proactively sync profile with FastAPI PostgreSQL backend
-      apiClient.syncUserProfile().catch(() => {});
+      // Proactively sync profile with FastAPI PostgreSQL backend to adopt authoritative DB role
+      apiClient.syncUserProfile().then((dbUser) => {
+        if (dbUser && dbUser.role) {
+          setUser((prev) => (prev ? { ...prev, role: dbUser.role } : null));
+        }
+      }).catch((err) => {
+        console.warn('Profile sync failed:', err);
+      });
     } else {
       setUser(null);
     }
@@ -149,11 +157,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthToken(null);
   };
 
-  const signInDemo = (role: string = 'Senior Watershed Planner') => {
+  const signInDemo = (role: string = 'planner') => {
     const demoUser: AuthUser = {
       id: 'google-oauth-demo-001',
       email: 'planner.karnataka@aquavane.gov.in',
-      fullName: 'Aarav Sharma',
+      fullName: 'Aarav Sharma (Planner)',
       avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
       role,
       provider: 'google',
@@ -161,6 +169,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     localStorage.setItem('aquavane_demo_user', JSON.stringify(demoUser));
     setUser(demoUser);
+  };
+
+  const switchRoleDemo = (role: 'admin' | 'planner' | 'viewer') => {
+    setUser((prev) => {
+      if (!prev) {
+        const newUser: AuthUser = {
+          id: 'demo-user-switched',
+          email: `${role}.watershed@aquavane.gov.in`,
+          fullName:
+            role === 'admin'
+              ? 'District Super Administrator'
+              : role === 'planner'
+              ? 'Lead Watershed Planner'
+              : 'Public Citizen Observer',
+          role,
+          provider: 'demo',
+          isAuthenticated: true,
+        };
+        localStorage.setItem('aquavane_demo_user', JSON.stringify(newUser));
+        return newUser;
+      }
+      const updated: AuthUser = { ...prev, role };
+      localStorage.setItem('aquavane_demo_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return (
@@ -175,6 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signInWithGoogle,
         signOut,
         signInDemo,
+        switchRoleDemo,
       }}
     >
       {children}

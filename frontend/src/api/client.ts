@@ -713,9 +713,65 @@ export const api = {
       const res = await fetchWithAuth(`${API_BASE}/auth/sync-profile`, {
         method: 'POST',
       });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          id: data.id,
+          email: data.email,
+          fullName: data.full_name || data.fullName,
+          avatarUrl: data.avatar_url || data.avatarUrl,
+          role: data.role,
+          provider: data.provider || 'google',
+          isAuthenticated: true,
+        };
+      }
     } catch {}
     return null;
+  },
+
+  async updateUserRole(userId: string, role: string): Promise<any> {
+    const res = await fetchWithAuth(`${API_BASE}/auth/users/${userId}/role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update user role');
+    }
+    return await res.json();
+  },
+
+  async createSavedPlan(payload: any): Promise<any> {
+    const res = await fetchWithAuth(`${API_BASE}/plans`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server returned ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async listSavedPlans(): Promise<any[]> {
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/plans`);
+      if (res.ok) return await res.json();
+    } catch {}
+    return [];
+  },
+
+  async deleteSavedPlan(planId: string): Promise<any> {
+    const res = await fetchWithAuth(`${API_BASE}/plans/${planId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server returned ${res.status}`);
+    }
+    return await res.json();
   },
   async predictAOI(geojson: any, name?: string): Promise<AOIPredictionResult> {
     try {

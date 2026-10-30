@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Waves,
-  ShieldCheck,
   Database,
   RefreshCw,
   Compass,
   LogOut,
-  User as UserIcon,
   ChevronDown,
   Shield,
   CheckCircle,
+  Eye,
+  SlidersHorizontal,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AuthModal } from './AuthModal';
@@ -20,7 +21,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onRefresh, isRefreshing }) => {
-  const { user, isConfigured, signInWithGoogle, signOut } = useAuth();
+  const { user, isConfigured, signInWithGoogle, signOut, switchRoleDemo } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -46,6 +47,34 @@ export const Navbar: React.FC<NavbarProps> = ({ onRefresh, isRefreshing }) => {
       }
     }
   };
+
+  const getRoleBadge = (roleStr?: string) => {
+    const r = (roleStr || '').toLowerCase();
+    if (r.includes('admin')) {
+      return {
+        label: 'Admin',
+        bg: 'bg-rose-500/15 border-rose-500/30 text-rose-300',
+        dot: 'bg-rose-400',
+        icon: <Shield className="h-3 w-3 text-rose-400" />,
+      };
+    }
+    if (r.includes('viewer')) {
+      return {
+        label: 'Viewer (Read-only)',
+        bg: 'bg-amber-500/15 border-amber-500/30 text-amber-300',
+        dot: 'bg-amber-400',
+        icon: <Eye className="h-3 w-3 text-amber-400" />,
+      };
+    }
+    return {
+      label: 'District Planner',
+      bg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300',
+      dot: 'bg-emerald-400',
+      icon: <CheckCircle className="h-3 w-3 text-emerald-400" />,
+    };
+  };
+
+  const badge = getRoleBadge(user?.role);
 
   return (
     <>
@@ -119,9 +148,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onRefresh, isRefreshing }) => {
                     <div className="text-xs font-semibold text-white truncate max-w-[120px]">
                       {user.fullName || user.email?.split('@')[0]}
                     </div>
-                    <div className="text-[10px] text-aqua-400 flex items-center gap-1 font-medium capitalize">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                      {user.role}
+                    <div className={`text-[10px] px-1.5 py-0.2 rounded border flex items-center gap-1 font-medium capitalize ${badge.bg}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${badge.dot}`}></span>
+                      {badge.label}
                     </div>
                   </div>
 
@@ -130,34 +159,95 @@ export const Navbar: React.FC<NavbarProps> = ({ onRefresh, isRefreshing }) => {
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-3 z-50 animate-fade-in text-white space-y-3">
-                    <div className="px-2 py-1 border-b border-slate-800/80 pb-3">
-                      <p className="text-xs font-bold text-white truncate">{user.fullName}</p>
-                      <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+                  <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-3.5 z-50 animate-fade-in text-white space-y-3">
+                    <div className="px-1 py-1 border-b border-slate-800 pb-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-white truncate">{user.fullName}</p>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border flex items-center gap-1 font-semibold ${badge.bg}`}>
+                          {badge.icon}
+                          {badge.label}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5">{user.email}</p>
                       <div className="mt-2 flex items-center gap-1.5 text-[10px] bg-brand-950/60 text-brand-300 border border-brand-800/50 px-2 py-0.5 rounded-full w-fit">
                         <CheckCircle className="h-3 w-3 text-emerald-400" />
-                        Google OAuth Verified
+                        Google OAuth • JWT HS256
                       </div>
                     </div>
 
-                    <div className="space-y-1 text-xs text-slate-300">
-                      <div className="flex items-center justify-between px-2 py-1 text-[11px]">
-                        <span className="text-slate-400">Authorization</span>
-                        <span className="font-mono text-aqua-400 text-[10px]">JWT (HS256)</span>
+                    {/* RBAC Quick Role Switcher for Evaluation */}
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium px-1">
+                        <span className="flex items-center gap-1">
+                          <SlidersHorizontal className="h-3 w-3 text-aqua-400" />
+                          RBAC Role Tester
+                        </span>
+                        <span className="text-[9px] text-slate-500 uppercase">Interactive</span>
                       </div>
-                      <div className="flex items-center justify-between px-2 py-1 text-[11px]">
-                        <span className="text-slate-400">Assigned Role</span>
-                        <span className="font-medium text-slate-200 capitalize">{user.role}</span>
+                      <div className="grid grid-cols-3 gap-1.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => switchRoleDemo('admin')}
+                          className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border transition flex flex-col items-center gap-0.5 ${
+                            (user.role || '').toLowerCase().includes('admin')
+                              ? 'bg-rose-500/20 border-rose-500/60 text-rose-300 shadow-sm shadow-rose-500/20'
+                              : 'bg-slate-800/80 border-slate-700/60 text-slate-400 hover:text-white hover:bg-slate-800'
+                          }`}
+                        >
+                          <Shield className="h-3 w-3" />
+                          Admin
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => switchRoleDemo('planner')}
+                          className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border transition flex flex-col items-center gap-0.5 ${
+                            (user.role || '').toLowerCase().includes('planner')
+                              ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-sm shadow-emerald-500/20'
+                              : 'bg-slate-800/80 border-slate-700/60 text-slate-400 hover:text-white hover:bg-slate-800'
+                          }`}
+                        >
+                          <CheckCircle className="h-3 w-3" />
+                          Planner
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => switchRoleDemo('viewer')}
+                          className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border transition flex flex-col items-center gap-0.5 ${
+                            (user.role || '').toLowerCase().includes('viewer')
+                              ? 'bg-amber-500/20 border-amber-500/60 text-amber-300 shadow-sm shadow-amber-500/20'
+                              : 'bg-slate-800/80 border-slate-700/60 text-slate-400 hover:text-white hover:bg-slate-800'
+                          }`}
+                        >
+                          <Lock className="h-3 w-3" />
+                          Viewer
+                        </button>
+                      </div>
+                      <div className="text-[10px] text-slate-400 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 mt-1">
+                        {(user.role || '').toLowerCase().includes('admin') && (
+                          <span className="text-rose-300">
+                            <strong>Admin:</strong> Universal persist, delete DPRs, modify DB schema & user roles.
+                          </span>
+                        )}
+                        {(user.role || '').toLowerCase().includes('planner') && (
+                          <span className="text-emerald-300">
+                            <strong>Planner:</strong> Full simulation, saving DPR proposals & exporting official BoQs.
+                          </span>
+                        )}
+                        {(user.role || '').toLowerCase().includes('viewer') && (
+                          <span className="text-amber-300">
+                            <strong>Viewer:</strong> Read-only exploration. Persisting & mutating plans is locked.
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <div className="border-t border-slate-800/80 pt-2">
+                    <div className="border-t border-slate-800 pt-2">
                       <button
                         onClick={async () => {
                           setIsDropdownOpen(false);
                           await signOut();
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition"
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition"
                       >
                         <LogOut className="h-3.5 w-3.5" />
                         Sign Out

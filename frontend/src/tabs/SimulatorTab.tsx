@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sliders,
+  Lock,
   Save,
   Download,
   RotateCcw,
@@ -33,10 +34,13 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { useResearch } from '../context/ResearchContext';
+import { useAuth } from '../context/AuthContext';
 import { LockedTabBanner } from '../components/LockedTabBanner';
 
 export const SimulatorTab: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isViewer = (user?.role || '').toLowerCase().includes('viewer');
   const {
     activeArea,
     isAreaSelected,
@@ -84,6 +88,11 @@ export const SimulatorTab: React.FC = () => {
   }));
 
   const handleSavePlan = () => {
+    if (isViewer) {
+      setPlanSaveNotice('Access Denied (RBAC): Read-only "Viewer" accounts cannot persist restoration plans. Elevate your role to "Planner" or "Admin" via the profile menu.');
+      setTimeout(() => setPlanSaveNotice(null), 6000);
+      return;
+    }
     const saved = saveCurrentPlan();
     setPlanSaveNotice(`Plan saved successfully! (Saved as "${saved.area_name} DPR Plan")`);
     setTimeout(() => setPlanSaveNotice(null), 4000);
@@ -111,10 +120,16 @@ export const SimulatorTab: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={handleSavePlan}
-              className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-lg shadow-purple-600/30 flex items-center gap-2"
+              className={`px-4 py-2.5 rounded-xl text-white text-xs font-bold transition-all shadow-lg flex items-center gap-2 ${
+                isViewer
+                  ? 'bg-slate-700/80 hover:bg-slate-700 text-slate-300 border border-slate-600/60'
+                  : 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/30'
+              }`}
+              title={isViewer ? 'Read-only: Switch to Planner in top-right menu to save' : 'Save this scenario to DPR plans'}
             >
-              <Save className="h-4 w-4" />
-              Save Scenario
+              {isViewer ? <Lock className="h-4 w-4 text-amber-400" /> : <Save className="h-4 w-4" />}
+              <span>Save Scenario</span>
+              {isViewer && <span className="text-[10px] text-amber-400 font-normal">(Viewer Lock)</span>}
             </button>
             <button
               onClick={() => navigate('/plan')}

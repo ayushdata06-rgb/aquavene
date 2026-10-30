@@ -9,8 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.auth.deps import require_roles
 from app.db.session import get_db
 from app.models.models import SavedPlan
+from app.schemas.auth import AuthenticatedUser
 
 router = APIRouter()
 
@@ -45,6 +47,7 @@ class SavedPlanResponse(BaseModel):
     budget_lakhs_inr: float
     interventions: Optional[List[Dict[str, Any]]] = []
     created_at: datetime
+    created_by: Optional[uuid.UUID] = None
 
     model_config = {"from_attributes": True}
 
@@ -109,6 +112,10 @@ def _to_plan_response(p: Any, fallback_id: Optional[uuid.UUID] = None) -> SavedP
     if not isinstance(created_at, datetime):
         created_at = now
 
+    created_by = getattr(p, "created_by", None)
+    if not isinstance(created_by, (uuid.UUID, type(None))):
+        created_by = None
+
     return SavedPlanResponse(
         id=p_id,
         area_name=area_name,
@@ -124,14 +131,28 @@ def _to_plan_response(p: Any, fallback_id: Optional[uuid.UUID] = None) -> SavedP
         budget_lakhs_inr=float(budget),
         interventions=interventions,
         created_at=created_at,
+        created_by=created_by,
     )
 
 
 @router.post("", response_model=SavedPlanResponse)
-def create_saved_plan(payload: SavedPlanCreate, db: Session = Depends(get_db)):
-    """Save a civil restoration plan and DPR proposal."""
+def create_saved_plan(
+    payload: SavedPlanCreate,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(require_roles(["admin", "planner", "officer"])),
+):
+    """
+    Save a civil restoration plan and DPR proposal.
+    Guarded by RBAC: requires 'admin', 'planner', or 'officer' role.
+    """
     plan_id = uuid.uuid4()
     now = datetime.now(timezone.utc)
+
+    creator_uuid = None
+    try:
+        creator_uuid = uuid.UUID(current_user.id)
+    except (ValueError, AttributeError):
+        pass
 
     plan = SavedPlan(
         id=plan_id,
@@ -148,6 +169,7 @@ def create_saved_plan(payload: SavedPlanCreate, db: Session = Depends(get_db)):
         budget_lakhs_inr=payload.budget_lakhs_inr,
         interventions_json=payload.interventions or [],
         created_at=now,
+        created_by=creator_uuid,
     )
     db.add(plan)
     db.commit()
@@ -173,8 +195,15 @@ def get_saved_plan(plan_id: uuid.UUID, db: Session = Depends(get_db)):
 
 
 @router.delete("/{plan_id}")
-def delete_saved_plan(plan_id: uuid.UUID, db: Session = Depends(get_db)):
-    """Delete a saved restoration plan by ID."""
+def delete_saved_plan(
+    plan_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(require_roles(["admin"])),
+):
+    """
+    Delete a saved restoration plan by ID.
+    Guarded by RBAC: requires 'admin' role.
+    """
     plan = db.query(SavedPlan).filter(SavedPlan.id == plan_id).first()
     if not plan:
         raise HTTPException(status_code=404, detail="Restoration plan not found.")

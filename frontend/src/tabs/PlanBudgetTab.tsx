@@ -15,12 +15,21 @@ import {
   Fish,
   Tractor,
   Layers,
+  Save,
+  Lock,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
+import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../api/client';
 
 export const PlanBudgetTab: React.FC = () => {
   const navigate = useNavigate();
-  const { activeArea, sliderValues } = useResearch();
+  const { activeArea, sliderValues, simulatedResult, saveCurrentPlan } = useResearch();
+  const { user } = useAuth();
+  const isViewer = (user?.role || '').toLowerCase().includes('viewer');
+
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+  const [dprSaveNotice, setDprSaveNotice] = useState<string | null>(null);
 
   const plan = activeArea?.restoration_plan;
   const boq = plan?.bill_of_quantities || [
@@ -71,6 +80,54 @@ export const PlanBudgetTab: React.FC = () => {
       ],
     },
   ];
+
+  const handleSaveDPR = async () => {
+    if (isViewer) {
+      setDprSaveNotice(
+        'Access Denied (RBAC): Read-only "Viewer" accounts cannot persist official DPR proposals. Switch role to "District Planner" in the top-right profile menu to save.'
+      );
+      setTimeout(() => setDprSaveNotice(null), 6000);
+      return;
+    }
+    if (!activeArea) return;
+
+    setIsSavingPlan(true);
+    try {
+      // 1. Save locally in context
+      saveCurrentPlan();
+
+      // 2. Persist to FastAPI PostgreSQL backend
+      await apiClient.createSavedPlan({
+        area_name: activeArea.name,
+        area_sq_km: activeArea.area_sq_km,
+        original_score: activeArea.score,
+        simulated_score: simulatedResult?.simulated_score || Math.max(10, activeArea.score - 28),
+        original_soil_loss: activeArea.soil_loss_t_ha_yr,
+        simulated_soil_loss:
+          simulatedResult?.new_soil_loss_t_ha_yr || Math.round(activeArea.soil_loss_t_ha_yr * 0.4 * 10) / 10,
+        reforest_pct: sliderValues.reforest_pct,
+        check_dams_count: sliderValues.check_dams,
+        cct_pct: sliderValues.cct_pct,
+        budget_lakhs_inr: totalBudgetLakhs,
+        interventions: boq.map((b) => ({
+          title: b.description,
+          item_code: b.item_code,
+          quantity: b.quantity,
+          estimated_cost_lakhs_inr: b.total_cost_lakhs,
+        })),
+      });
+
+      setDprSaveNotice(
+        'Official DPR Proposal successfully sanctioned and stored in PostgreSQL database!'
+      );
+    } catch (err: any) {
+      console.warn('Backend plan save error:', err);
+      setDprSaveNotice(`DPR saved to local cache (${err.message || 'Offline mode'})`);
+    } finally {
+      setIsSavingPlan(false);
+      setTimeout(() => setDprSaveNotice(null), 5000);
+    }
+  };
 
   const handleDownloadCSV = () => {
     const headers = ['Item Code,Description,Quantity,Unit Rate (Lakhs INR),Total Cost (Lakhs INR)'];
@@ -125,24 +182,51 @@ export const PlanBudgetTab: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={handleSaveDPR}
+              disabled={isSavingPlan}
+              className={`px-4 py-2.5 rounded-xl text-white text-xs font-bold transition-all shadow-lg flex items-center gap-2 ${
+                isViewer
+                  ? 'bg-slate-700/80 hover:bg-slate-700 text-slate-300 border border-slate-600/60'
+                  : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+              }`}
+              title={isViewer ? 'Read-only: Switch to Planner in profile menu to save' : 'Persist official DPR proposal to database'}
+            >
+              {isViewer ? <Lock className="h-4 w-4 text-amber-400" /> : <Save className="h-4 w-4" />}
+              <span>{isSavingPlan ? 'Saving to DB...' : 'Save DPR to Database'}</span>
+              {isViewer && <span className="text-[10px] text-amber-400 font-normal">(Viewer Lock)</span>}
+            </button>
             <button
               onClick={handleDownloadCSV}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all border border-slate-700 flex items-center gap-2"
+              className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all border border-slate-700 flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
               Export BoQ (CSV)
             </button>
             <button
               onClick={handleDownloadJSON}
-              className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition-all shadow-lg shadow-teal-600/30 flex items-center gap-2"
+              className="px-3.5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition-all shadow-lg shadow-teal-600/30 flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
-              Download Full DPR (JSON)
+              Download DPR (JSON)
             </button>
           </div>
         </div>
       </div>
+
+      {dprSaveNotice && (
+        <div
+          className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+            dprSaveNotice.includes('Denied')
+              ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+              : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+          }`}
+        >
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{dprSaveNotice}</span>
+        </div>
+      )}
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -270,4 +354,3 @@ export const PlanBudgetTab: React.FC = () => {
     </div>
   );
 };
-
