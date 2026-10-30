@@ -21,11 +21,15 @@ class AOIPredictRequest(BaseModel):
 
 
 class CounterfactualSimulateRequest(BaseModel):
-    """Request payload for real-time what-if simulation."""
+    """Request payload for real-time what-if simulation across 5 restoration levers."""
     base_features: Dict[str, Any]
     reforest_bare_soil_pct: float = Field(0.0, ge=0.0, le=100.0)
     add_check_dams_count: int = Field(0, ge=0, le=20)
     cct_ridge_coverage_pct: float = Field(0.0, ge=0.0, le=100.0)
+    stream_bank_repair_km: float = Field(0.0, ge=0.0, le=50.0)
+    barriers_removed_count: int = Field(0, ge=0, le=20)
+    dirt_roads_stabilized_km: float = Field(0.0, ge=0.0, le=50.0)
+    cover_crop_cropland_pct: float = Field(0.0, ge=0.0, le=100.0)
 
 
 @router.post("/aoi")
@@ -65,6 +69,10 @@ def simulate_counterfactual(payload: CounterfactualSimulateRequest) -> Dict[str,
             reforest_bare_soil_pct=payload.reforest_bare_soil_pct,
             add_check_dams_count=payload.add_check_dams_count,
             cct_ridge_coverage_pct=payload.cct_ridge_coverage_pct,
+            stream_bank_repair_km=payload.stream_bank_repair_km,
+            barriers_removed_count=payload.barriers_removed_count,
+            dirt_roads_stabilized_km=payload.dirt_roads_stabilized_km,
+            cover_crop_cropland_pct=payload.cover_crop_cropland_pct,
         )
     except Exception as e:
         logger.error("Error in ML counterfactual simulation: %s", e)

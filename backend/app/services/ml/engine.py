@@ -17,6 +17,10 @@ import shap
 import xgboost as xgb
 
 from app.services.ml.feature_extractor import AOIFeatureExtractor
+from app.services.geo.location_service import LocationIntelligenceService
+from app.services.geo.history_service import WaterHistoryService
+from app.services.geo.hydrology_network_service import HydrologyNetworkService
+from app.services.ml.restoration_planner import RestorationPlannerService
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +191,38 @@ class RestorationMLEngine:
             score=score,
         )
 
+        # Reverse Geocoding & Basin Detection (OSM Nominatim)
+        location = LocationIntelligenceService.reverse_geocode(
+            centroid=features["centroid"],
+            bounds=features["bounds"],
+            area_sq_km=features["area_sq_km"],
+            elevation_relief_m=features["elevation_relief_m"],
+        )
+
+        # Historical Water Context & Wikipedia Articles
+        history = WaterHistoryService.get_water_history(
+            centroid=features["centroid"],
+            district=location.get("district", "Catchment"),
+            river_basin=location.get("river_basin", "Peninsular Basin"),
+            rainfall_30d_mm=features["rainfall_30d_mm"],
+            rainfall_anomaly_pct=features["rainfall_anomaly_pct"],
+        )
+
+        # Physical Hydrology Stream Network & Flow Vectors (GeoPandas & Shapely)
+        hydrology_network = HydrologyNetworkService.generate_hydrology_layers(
+            polygon_geom=geojson_geometry,
+            bounds=features["bounds"],
+            mean_slope_deg=features["mean_slope_deg"],
+            stream_order_max=features.get("stream_order_max", 3),
+        )
+
+        # Comprehensive 5-Pillar Restoration Plan & MGNREGA BoQ
+        restoration_plan = RestorationPlannerService.generate_full_plan(
+            features=features,
+            location=location,
+            score=score,
+        )
+
         return {
             "status": "success",
             "score": score,
@@ -194,11 +230,15 @@ class RestorationMLEngine:
             "badge_color": badge_color,
             "soil_loss_t_ha_yr": soil_loss_t_ha_yr,
             "features": features,
+            "location": location,
+            "history": history,
+            "hydrology_network": hydrology_network,
+            "restoration_plan": restoration_plan,
             "shap_drivers": shap_drivers[:6],
             "hydrograph": hydrograph,
             "peak_discharge_m3s": peak_discharge_m3s,
             "prescribed_interventions": interventions,
-            "estimated_budget_lakhs_inr": total_budget_lakhs,
+            "estimated_budget_lakhs_inr": restoration_plan["summary"]["total_budget_lakhs_inr"] or total_budget_lakhs,
         }
 
     def simulate_counterfactual(
@@ -207,23 +247,40 @@ class RestorationMLEngine:
         reforest_bare_soil_pct: float = 0.0,
         add_check_dams_count: int = 0,
         cct_ridge_coverage_pct: float = 0.0,
+        stream_bank_repair_km: float = 0.0,
+        barriers_removed_count: int = 0,
+        dirt_roads_stabilized_km: float = 0.0,
+        cover_crop_cropland_pct: float = 0.0,
     ) -> Dict[str, Any]:
-        """Simulate real-time what-if scenario by adjusting parameters."""
-        # Create modified feature dictionary
+        """Simulate real-time what-if scenario across all 5 restoration levers."""
         mod_features = dict(base_features)
 
-        # Adjust bare soil and tree cover
-        reforest_shift = min(mod_features["bare_soil_pct"], reforest_bare_soil_pct)
-        mod_features["bare_soil_pct"] = round(max(1.0, mod_features["bare_soil_pct"] - reforest_shift), 1)
-        mod_features["tree_cover_pct"] = round(min(85.0, mod_features["tree_cover_pct"] + reforest_shift), 1)
+        # 1. Reforestation shifts bare soil to vegetative cover
+        reforest_shift = min(mod_features.get("bare_soil_pct", 25.0), reforest_bare_soil_pct)
+        mod_features["bare_soil_pct"] = round(max(1.0, mod_features.get("bare_soil_pct", 25.0) - reforest_shift), 1)
+        mod_features["tree_cover_pct"] = round(min(85.0, mod_features.get("tree_cover_pct", 30.0) + reforest_shift), 1)
 
-        # Soil bunding / contour trenches reduce effective runoff slope
-        slope_reduction = min(8.0, cct_ridge_coverage_pct * 0.15)
-        mod_features["mean_slope_deg"] = round(max(2.0, mod_features["mean_slope_deg"] - slope_reduction), 1)
+        # 2. Contour trenches, road water bars & bank bio-stabilization flatten runoff slope
+        slope_reduction = min(
+            9.0,
+            (cct_ridge_coverage_pct * 0.15)
+            + (dirt_roads_stabilized_km * 0.4)
+            + (stream_bank_repair_km * 0.3)
+        )
+        mod_features["mean_slope_deg"] = round(max(1.5, mod_features.get("mean_slope_deg", 12.0) - slope_reduction), 1)
 
-        # Evaluate new score
-        feature_vec = np.array([[mod_features[k] for k in FEATURE_NAMES]])
-        new_score = round(float(np.clip(self.scorer_model.predict(feature_vec)[0] - (add_check_dams_count * 1.8), 2.0, 100.0)), 1)
+        # 3. Structural reliefs (check dams + barrier removal + road water bars)
+        structural_relief = (
+            (add_check_dams_count * 1.8)
+            + (barriers_removed_count * 2.5)
+            + (dirt_roads_stabilized_km * 1.2)
+            + (cover_crop_cropland_pct * 0.1)
+        )
+
+        # Evaluate ML XGBoost prediction
+        feature_vec = np.array([[mod_features.get(k, 10.0) for k in FEATURE_NAMES]])
+        raw_pred = float(self.scorer_model.predict(feature_vec)[0])
+        new_score = round(float(np.clip(raw_pred - structural_relief, 2.0, 100.0)), 1)
         original_score = base_features.get("original_score", new_score + 15.0)
 
         delta = round(new_score - original_score, 1)
@@ -237,8 +294,17 @@ class RestorationMLEngine:
         else:
             category = "Low"
 
-        # Recompute soil loss
-        new_soil_loss = round(max(0.8, (new_score / 100.0) ** 1.8 * 45.0), 1)
+        # Recompute soil loss (RUSLE calibration)
+        new_soil_loss = round(max(0.6, (new_score / 100.0) ** 1.8 * 45.0), 1)
+
+        # Re-simulate dynamic hydrograph with flattened curve
+        new_hydrograph, new_peak_q = self._simulate_hydrograph(
+            area_km2=mod_features.get("area_sq_km", 10.0),
+            slope_deg=mod_features["mean_slope_deg"],
+            rain_30d_mm=mod_features.get("rainfall_30d_mm", 140.0),
+            bare_soil_pct=mod_features["bare_soil_pct"],
+            daily_series=mod_features.get("daily_rainfall_series"),
+        )
 
         return {
             "simulated_score": new_score,
@@ -246,6 +312,8 @@ class RestorationMLEngine:
             "score_delta": delta,
             "reduction_pct": round(abs(delta) / (original_score or 1.0) * 100.0, 1) if delta < 0 else 0.0,
             "new_soil_loss_t_ha_yr": new_soil_loss,
+            "new_peak_discharge_m3s": new_peak_q,
+            "simulated_hydrograph": new_hydrograph,
             "modified_features": {
                 "bare_soil_pct": mod_features["bare_soil_pct"],
                 "tree_cover_pct": mod_features["tree_cover_pct"],

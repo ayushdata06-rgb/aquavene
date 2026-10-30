@@ -177,7 +177,7 @@ export interface HydrographPoint {
 
 export interface PrescribedIntervention {
   title: string;
-  type: 'contour_trenching' | 'check_dams' | 'farm_ponds' | 'afforestation';
+  type: string;
   quantity: string;
   target_zone: string;
   estimated_cost_lakhs_inr: number;
@@ -185,7 +185,149 @@ export interface PrescribedIntervention {
   coordinates: [number, number];
 }
 
-export interface AOIPredictionResult {
+export interface LocationInfo {
+  display_name: string;
+  locality: string;
+  district: string;
+  state: string;
+  country: string;
+  river_basin: string;
+  agro_climatic_zone: string;
+  area_sq_km: number;
+  area_hectares: number;
+  centroid: [number, number];
+  bounds: [number, number, number, number];
+}
+
+export interface WikipediaArticle {
+  title: string;
+  distance_km: number;
+  summary: string;
+  url: string;
+}
+
+export interface WaterChallenge {
+  severity: string;
+  category: string;
+  description: string;
+}
+
+export interface HistoricalTimelineItem {
+  era: string;
+  title: string;
+  detail: string;
+}
+
+export interface WaterHistoryInfo {
+  centroid: [number, number];
+  district: string;
+  river_basin: string;
+  nearby_water_features: WikipediaArticle[];
+  water_challenges: WaterChallenge[];
+  historical_timeline: HistoricalTimelineItem[];
+  monsoon_risk_summary: string;
+}
+
+export interface HydrologyLayerCollection {
+  type: string;
+  streams: {
+    type: string;
+    features: Array<{
+      type: string;
+      geometry: { type: string; coordinates: [number, number][] };
+      properties: {
+        name: string;
+        strahler_order: number;
+        flow_rate_m3s: number;
+        color: string;
+        stroke_width: number;
+        is_main_stem: boolean;
+      };
+    }>;
+  };
+  flow_vectors: {
+    type: string;
+    features: Array<{
+      type: string;
+      geometry: { type: string; coordinates: [number, number] };
+      properties: {
+        bearing_deg: number;
+        velocity_ms: number;
+        flow_intensity: string;
+      };
+    }>;
+  };
+  barriers: {
+    type: string;
+    features: Array<{
+      type: string;
+      geometry: { type: string; coordinates: [number, number] };
+      properties: {
+        title: string;
+        type: string;
+        action: string;
+        fish_impact: string;
+      };
+    }>;
+  };
+  dirt_roads: {
+    type: string;
+    features: Array<{
+      type: string;
+      geometry: { type: string; coordinates: [number, number][] };
+      properties: {
+        road_name: string;
+        surface: string;
+        erosion_risk: string;
+        intervention: string;
+      };
+    }>;
+  };
+}
+
+export interface BoQItem {
+  item_code: string;
+  description: string;
+  quantity: string;
+  unit_rate_lakhs: number;
+  total_cost_lakhs: number;
+}
+
+export interface RestorationPillarDetail {
+  title: string;
+  target_zone: string;
+  boq_items: BoQItem[];
+  coordinates: [number, number];
+  [key: string]: any;
+}
+
+export interface ImplementationPhase {
+  phase: string;
+  budget_lakhs: number;
+  focus: string;
+  milestones: string[];
+}
+
+export interface RestorationPlan {
+  summary: {
+    catchment_name: string;
+    district: string;
+    river_basin: string;
+    urgency_score: number;
+    total_budget_lakhs_inr: number;
+    projected_runoff_reduction_pct: number;
+    projected_soil_loss_reduction_pct: number;
+  };
+  pillar1_reforestation: RestorationPillarDetail;
+  pillar2_stream_wetland: RestorationPillarDetail;
+  pillar3_barriers_fish: RestorationPillarDetail;
+  pillar4_erosion_roads: RestorationPillarDetail;
+  pillar5_regenerative_farming: RestorationPillarDetail;
+  bill_of_quantities: BoQItem[];
+  implementation_roadmap: ImplementationPhase[];
+}
+
+export interface AOIPredictResponse {
   status: string;
   name?: string;
   score: number;
@@ -211,6 +353,10 @@ export interface AOIPredictionResult {
     stream_order_max: number;
     dist_to_major_river_km: number;
   };
+  location?: LocationInfo;
+  history?: WaterHistoryInfo;
+  hydrology_network?: HydrologyLayerCollection;
+  restoration_plan?: RestorationPlan;
   shap_drivers: SHAPDriver[];
   hydrograph: HydrographPoint[];
   peak_discharge_m3s: number;
@@ -218,19 +364,22 @@ export interface AOIPredictionResult {
   estimated_budget_lakhs_inr: number;
 }
 
+export type AOIPredictionResult = AOIPredictResponse;
+
 export interface CounterfactualSimulationResult {
   simulated_score: number;
   simulated_category: PriorityCategory;
   score_delta: number;
   reduction_pct: number;
   new_soil_loss_t_ha_yr: number;
+  new_peak_discharge_m3s?: number;
+  simulated_hydrograph?: HydrographPoint[];
   modified_features: {
     bare_soil_pct: number;
     tree_cover_pct: number;
     effective_slope_deg: number;
   };
 }
-
 
 export interface ActiveArea {
   id: string;
@@ -262,6 +411,10 @@ export interface ActiveArea {
   prescribed_interventions: PrescribedIntervention[];
   estimated_budget_lakhs_inr: number;
   shap_drivers: SHAPDriver[];
+  location?: LocationInfo;
+  history?: WaterHistoryInfo;
+  hydrology_network?: HydrologyLayerCollection;
+  restoration_plan?: RestorationPlan;
   isCustom: boolean;
 }
 

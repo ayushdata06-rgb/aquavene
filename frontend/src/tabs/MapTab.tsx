@@ -20,6 +20,9 @@ import {
   Mountain,
   Trees,
   ShieldAlert,
+  Fish,
+  Shield,
+  BookOpen,
 } from 'lucide-react';
 import { useResearch, FourPointMarker } from '../context/ResearchContext';
 import { FIXTURE_RANKINGS, FIXTURE_WATERSHEDS } from '../api/client';
@@ -44,10 +47,11 @@ export const MapTab: React.FC = () => {
 
   // Basemap & Layer states
   const [activeBasemap, setActiveBasemap] = useState<'satellite' | 'dark' | 'osm' | 'topo'>('satellite');
-  const [layerOpacity, setLayerOpacity] = useState<number>(75);
-  const [showTerrain, setShowTerrain] = useState<boolean>(true);
+  const [layerOpacity, setLayerOpacity] = useState<number>(85);
   const [showStreams, setShowStreams] = useState<boolean>(true);
-  const [showLandCover, setShowLandCover] = useState<boolean>(false);
+  const [showBarriers, setShowBarriers] = useState<boolean>(true);
+  const [showDirtRoads, setShowDirtRoads] = useState<boolean>(true);
+  const [showWorks, setShowWorks] = useState<boolean>(true);
   const [isDrawMode, setIsDrawMode] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [mouseCoords, setMouseCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -58,6 +62,9 @@ export const MapTab: React.FC = () => {
   const polygonLayerRef = useRef<L.Polygon | null>(null);
   const markersGroupRef = useRef<L.LayerGroup | null>(null);
   const watershedPolysRef = useRef<L.LayerGroup | null>(null);
+  const streamsLayerRef = useRef<L.GeoJSON | null>(null);
+  const barriersLayerRef = useRef<L.LayerGroup | null>(null);
+  const dirtRoadsLayerRef = useRef<L.GeoJSON | null>(null);
   const worksMarkersRef = useRef<L.LayerGroup | null>(null);
 
   // Corner hints
@@ -86,6 +93,7 @@ export const MapTab: React.FC = () => {
     // Layer groups
     markersGroupRef.current = L.layerGroup().addTo(map);
     watershedPolysRef.current = L.layerGroup().addTo(map);
+    barriersLayerRef.current = L.layerGroup().addTo(map);
     worksMarkersRef.current = L.layerGroup().addTo(map);
 
     // Initial tile layer (Esri Satellite)
@@ -106,13 +114,9 @@ export const MapTab: React.FC = () => {
       setZoomLevel(map.getZoom());
     });
 
-    // Custom 4-Point Drawing Click Listener
+    // Map Click Handler for 4-Point Drawing
     map.on('click', (e: L.LeafletMouseEvent) => {
-      // Access current points length from ref or DOM check
-      const currentCount = (markersGroupRef.current?.getLayers().length || 0);
-      if (currentCount < 4) {
-        addFourPoint(e.latlng.lat, e.latlng.lng);
-      }
+      addFourPoint(e.latlng.lat, e.latlng.lng);
     });
 
     return () => {
@@ -125,61 +129,15 @@ export const MapTab: React.FC = () => {
   useEffect(() => {
     if (!mapInstanceRef.current || !baseTileLayerRef.current) return;
 
-    let tileUrl = '';
-    switch (activeBasemap) {
-      case 'satellite':
-        tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-        break;
-      case 'dark':
-        tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-        break;
-      case 'osm':
-        tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-        break;
-      case 'topo':
-        tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
-        break;
-    }
+    const tileConfigs = {
+      satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      topo: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    };
 
-    baseTileLayerRef.current.setUrl(tileUrl);
+    baseTileLayerRef.current.setUrl(tileConfigs[activeBasemap]);
   }, [activeBasemap]);
-
-  // Render Pre-loaded Catchments on Map
-  useEffect(() => {
-    if (!mapInstanceRef.current || !watershedPolysRef.current) return;
-
-    watershedPolysRef.current.clearLayers();
-
-    FIXTURE_WATERSHEDS.forEach((ws) => {
-      const isSelected = activeArea?.id === ws.id || activeArea?.code === ws.watershed_code;
-      const rank = FIXTURE_RANKINGS.find((r) => r.watershed_id === ws.id);
-      const score = ws.overall_score || rank?.overall_score || 65;
-      const fillColor = score >= 75 ? '#ef4444' : score >= 60 ? '#f97316' : score >= 40 ? '#eab308' : '#10b981';
-
-      if (ws.coordinates && ws.coordinates.length > 0) {
-        const poly = L.polygon(ws.coordinates, {
-          color: isSelected ? '#38bdf8' : fillColor,
-          weight: isSelected ? 3.5 : 1.5,
-          opacity: 0.9,
-          fillColor: fillColor,
-          fillOpacity: (layerOpacity / 100) * (isSelected ? 0.45 : 0.25),
-          dashArray: isSelected ? '6, 6' : undefined,
-        });
-
-        poly.bindTooltip(
-          `<strong>${ws.name}</strong><br>Urgency: ${score.toFixed(1)} (${score >= 75 ? 'Critical' : score >= 60 ? 'High' : 'Moderate'})<br>Click to choose this area`,
-          { sticky: true }
-        );
-
-        poly.on('click', (e) => {
-          L.DomEvent.stopPropagation(e);
-          selectWatershed(ws);
-        });
-
-        watershedPolysRef.current?.addLayer(poly);
-      }
-    });
-  }, [activeArea?.id, layerOpacity]);
 
   // Update 4-Point Drawing Markers and Connecting Polygon
   useEffect(() => {
@@ -187,7 +145,6 @@ export const MapTab: React.FC = () => {
 
     markersGroupRef.current.clearLayers();
 
-    // Remove old polygon if exists
     if (polygonLayerRef.current) {
       mapInstanceRef.current.removeLayer(polygonLayerRef.current);
       polygonLayerRef.current = null;
@@ -200,7 +157,6 @@ export const MapTab: React.FC = () => {
     fourPoints.forEach((pt) => {
       latlngs.push([pt.lat, pt.lon]);
 
-      // Custom HTML badge marker for each point
       const customIcon = L.divIcon({
         className: 'custom-corner-pin',
         html: `
@@ -235,7 +191,6 @@ export const MapTab: React.FC = () => {
       markersGroupRef.current?.addLayer(marker);
     });
 
-    // Draw connecting lines or completed polygon
     if (latlngs.length >= 2) {
       const isComplete = latlngs.length === 4;
       const poly = L.polygon(latlngs, {
@@ -243,7 +198,7 @@ export const MapTab: React.FC = () => {
         weight: 3,
         dashArray: isComplete ? undefined : '6, 6',
         fillColor: '#10b981',
-        fillOpacity: isComplete ? 0.25 : 0.1,
+        fillOpacity: isComplete ? 0.20 : 0.08,
       }).addTo(mapInstanceRef.current);
 
       polygonLayerRef.current = poly;
@@ -254,13 +209,102 @@ export const MapTab: React.FC = () => {
     }
   }, [fourPoints]);
 
+  // Render Streams & Hydrology Network
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    if (streamsLayerRef.current) {
+      mapInstanceRef.current.removeLayer(streamsLayerRef.current);
+      streamsLayerRef.current = null;
+    }
+
+    if (showStreams && activeArea?.hydrology_network?.streams) {
+      streamsLayerRef.current = L.geoJSON(activeArea.hydrology_network.streams as any, {
+        style: (feature) => ({
+          color: feature?.properties?.color || '#38bdf8',
+          weight: (feature?.properties?.stroke_width || 3) * (layerOpacity / 100),
+          opacity: 0.95,
+        }),
+        onEachFeature: (feature, layer) => {
+          layer.bindPopup(`
+            <div class="p-1 space-y-1 text-xs">
+              <strong class="text-white block">${feature.properties.name}</strong>
+              <p class="text-cyan-300">Strahler Order ${feature.properties.strahler_order} • ${feature.properties.flow_rate_m3s} m³/s flow</p>
+            </div>
+          `);
+        },
+      }).addTo(mapInstanceRef.current);
+    }
+  }, [activeArea?.id, showStreams, layerOpacity]);
+
+  // Render Dirt Roads
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    if (dirtRoadsLayerRef.current) {
+      mapInstanceRef.current.removeLayer(dirtRoadsLayerRef.current);
+      dirtRoadsLayerRef.current = null;
+    }
+
+    if (showDirtRoads && activeArea?.hydrology_network?.dirt_roads) {
+      dirtRoadsLayerRef.current = L.geoJSON(activeArea.hydrology_network.dirt_roads as any, {
+        style: {
+          color: '#f97316',
+          weight: 3.5,
+          dashArray: '6, 6',
+          opacity: 0.9,
+        },
+        onEachFeature: (feature, layer) => {
+          layer.bindPopup(`
+            <div class="p-1 space-y-1 text-xs">
+              <strong class="text-orange-300 block">${feature.properties.road_name}</strong>
+              <p class="text-slate-200">${feature.properties.erosion_risk}</p>
+              <p class="text-slate-400 text-[11px]">${feature.properties.intervention}</p>
+            </div>
+          `);
+        },
+      }).addTo(mapInstanceRef.current);
+    }
+  }, [activeArea?.id, showDirtRoads]);
+
+  // Render Barriers & Fish Blocked Culverts
+  useEffect(() => {
+    if (!mapInstanceRef.current || !barriersLayerRef.current) return;
+
+    barriersLayerRef.current.clearLayers();
+
+    if (showBarriers && activeArea?.hydrology_network?.barriers) {
+      activeArea.hydrology_network.barriers.features.forEach((b: any) => {
+        const icon = L.divIcon({
+          className: 'barrier-pin',
+          html: `
+            <div class="w-7 h-7 rounded-full bg-rose-600 border-2 border-white shadow-xl flex items-center justify-center text-white text-xs cursor-pointer">
+              🐟
+            </div>
+          `,
+          iconSize: [28, 28],
+        });
+
+        const marker = L.marker([b.geometry.coordinates[1], b.geometry.coordinates[0]], { icon });
+        marker.bindPopup(`
+          <div class="p-1 space-y-1 text-xs">
+            <strong class="text-rose-400 block">${b.properties.title}</strong>
+            <p class="text-slate-200">${b.properties.action}</p>
+            <p class="text-slate-400 text-[11px]">${b.properties.fish_impact}</p>
+          </div>
+        `);
+        barriersLayerRef.current?.addLayer(marker);
+      });
+    }
+  }, [activeArea?.id, showBarriers]);
+
   // Render Recommended Civil Structure Pins on Map
   useEffect(() => {
     if (!mapInstanceRef.current || !worksMarkersRef.current) return;
 
     worksMarkersRef.current.clearLayers();
 
-    if (activeArea?.prescribed_interventions) {
+    if (showWorks && activeArea?.prescribed_interventions) {
       activeArea.prescribed_interventions.forEach((work) => {
         let iconHtml = '🧱';
         let iconBg = 'bg-amber-600';
@@ -279,7 +323,7 @@ export const MapTab: React.FC = () => {
         const icon = L.divIcon({
           className: 'work-pin',
           html: `
-            <div class="relative flex items-center justify-center -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
+            <div class="relative flex items-center justify-center -translate-x-1/2 -translate-y-1/2 cursor-pointer">
               <div class="w-7 h-7 rounded-lg ${iconBg} border border-white text-white shadow-lg flex items-center justify-center text-xs">
                 ${iconHtml}
               </div>
@@ -300,7 +344,7 @@ export const MapTab: React.FC = () => {
         worksMarkersRef.current?.addLayer(pin);
       });
     }
-  }, [activeArea?.id, activeArea?.prescribed_interventions]);
+  }, [activeArea?.id, activeArea?.prescribed_interventions, showWorks]);
 
   // Search Jump handler
   const handleSearch = (e: React.FormEvent) => {
@@ -330,7 +374,7 @@ export const MapTab: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Find village, district, or catchment..."
+              placeholder="Search Indian village, district, or river..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-4 py-2 w-56 sm:w-72 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-400 shadow-xl focus:outline-none focus:border-emerald-500"
@@ -339,12 +383,7 @@ export const MapTab: React.FC = () => {
 
           {/* Draw 4 Points Toggle Button */}
           <button
-            onClick={() => {
-              setIsDrawMode(!isDrawMode);
-              if (!isDrawMode && fourPoints.length === 0) {
-                // Keep ready
-              }
-            }}
+            onClick={() => setIsDrawMode(!isDrawMode)}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xl transition-all ${
               isDrawMode
                 ? 'bg-emerald-500 text-white shadow-emerald-500/30'
@@ -352,7 +391,7 @@ export const MapTab: React.FC = () => {
             }`}
           >
             <Compass className="w-3.5 h-3.5" />
-            <span>{isDrawMode ? 'Drawing 4 Corners...' : 'Draw My Area'}</span>
+            <span>{isDrawMode ? 'Click 4 Corners on Map...' : 'Draw 4-Corner Area'}</span>
           </button>
 
           {/* Undo Point / Clear */}
@@ -369,7 +408,7 @@ export const MapTab: React.FC = () => {
               <button
                 onClick={clearFourPoints}
                 className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-slate-800 text-xs"
-                title="Reset all 4 points"
+                title="Reset points"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
@@ -386,16 +425,17 @@ export const MapTab: React.FC = () => {
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-xs font-bold shadow-xl shadow-emerald-600/30 flex items-center gap-1.5 transition-all animate-pulse"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{isAnalyzing ? 'Checking Land...' : 'Check This Area'}</span>
+              <span>{isAnalyzing ? 'Detecting Area & Live APIs...' : 'Analyze Catchment'}</span>
             </button>
           )}
 
           {activeArea && (
             <button
-              onClick={() => navigate('/rankings')}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-bold shadow-xl flex items-center gap-1.5 transition-all"
+              onClick={() => navigate('/history')}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white text-xs font-bold shadow-xl flex items-center gap-1.5 transition-all"
             >
-              <span>See how urgent this area is</span>
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Explore History & News (Tab 2)</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
@@ -427,12 +467,11 @@ export const MapTab: React.FC = () => {
         </div>
       )}
 
-      {/* Left Floating Controls Dock */}
+      {/* Left Floating Controls Dock: Basemap & Layers */}
       <div className="absolute bottom-10 left-3 z-[400] bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl space-y-3.5 max-w-xs pointer-events-auto text-xs">
-        {/* Basemap Switcher */}
         <div>
           <span className="font-semibold text-slate-400 block mb-1.5 uppercase text-[10px] tracking-wider">
-            Map Style
+            Basemap
           </span>
           <div className="grid grid-cols-2 gap-1.5">
             {[
@@ -456,72 +495,67 @@ export const MapTab: React.FC = () => {
           </div>
         </div>
 
-        {/* Layer Toggles with Plain Language */}
+        {/* Layer Toggles */}
         <div className="pt-2 border-t border-slate-800 space-y-2">
           <span className="font-semibold text-slate-400 block mb-1 uppercase text-[10px] tracking-wider">
-            Show Land Layers
+            Restoration Layers
           </span>
-          <label className="flex items-center space-x-2 text-slate-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showTerrain}
-              onChange={(e) => setShowTerrain(e.target.checked)}
-              className="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0"
-            />
-            <Mountain className="w-3.5 h-3.5 text-amber-400" />
-            <span>Show land height & slope</span>
-          </label>
-
           <label className="flex items-center space-x-2 text-slate-300 cursor-pointer">
             <input
               type="checkbox"
               checked={showStreams}
               onChange={(e) => setShowStreams(e.target.checked)}
-              className="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0"
+              className="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0"
             />
             <Waves className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Show streams (small to main river)</span>
+            <span>Water Flow & Streams</span>
           </label>
 
           <label className="flex items-center space-x-2 text-slate-300 cursor-pointer">
             <input
               type="checkbox"
-              checked={showLandCover}
-              onChange={(e) => setShowLandCover(e.target.checked)}
+              checked={showBarriers}
+              onChange={(e) => setShowBarriers(e.target.checked)}
+              className="rounded bg-slate-800 border-slate-700 text-rose-500 focus:ring-0"
+            />
+            <Fish className="w-3.5 h-3.5 text-rose-400" />
+            <span>Fish Barriers & Blocked Culverts</span>
+          </label>
+
+          <label className="flex items-center space-x-2 text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showDirtRoads}
+              onChange={(e) => setShowDirtRoads(e.target.checked)}
+              className="rounded bg-slate-800 border-slate-700 text-orange-500 focus:ring-0"
+            />
+            <Shield className="w-3.5 h-3.5 text-orange-400" />
+            <span>Dirt Roads Erosion Bleed</span>
+          </label>
+
+          <label className="flex items-center space-x-2 text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showWorks}
+              onChange={(e) => setShowWorks(e.target.checked)}
               className="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0"
             />
-            <Trees className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Show land use (trees & bare soil)</span>
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Proposed Restoration Works</span>
           </label>
-        </div>
-
-        {/* Opacity Slider */}
-        <div className="pt-2 border-t border-slate-800">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-            <span>Layer strength</span>
-            <span className="font-bold text-white">{layerOpacity}%</span>
-          </div>
-          <input
-            type="range"
-            min="10"
-            max="100"
-            value={layerOpacity}
-            onChange={(e) => setLayerOpacity(Number(e.target.value))}
-            className="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
-          />
         </div>
       </div>
 
-      {/* Floating Active Area Zonal Stats HUD (When Area is Chosen) */}
+      {/* Floating Active Area Zonal Stats HUD */}
       {activeArea && (
         <div className="absolute top-16 right-3 z-[400] bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-2xl p-4 shadow-2xl max-w-xs space-y-3 pointer-events-auto text-xs">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-white flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-              {activeArea.name}
+            <h3 className="font-bold text-white flex items-center gap-1.5 truncate">
+              <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="truncate">{activeArea.name}</span>
             </h3>
             <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                 activeArea.score >= 75
                   ? 'bg-rose-500/20 text-rose-300'
                   : activeArea.score >= 60
@@ -535,6 +569,10 @@ export const MapTab: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-2 text-[11px]">
             <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
+              <span className="text-slate-400 block text-[10px]">Basin</span>
+              <strong className="text-cyan-300 text-xs truncate block">{activeArea.location?.river_basin || 'Peninsular Basin'}</strong>
+            </div>
+            <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
               <span className="text-slate-400 block text-[10px]">Area Size</span>
               <strong className="text-white text-xs">{activeArea.area_sq_km} km²</strong>
             </div>
@@ -543,25 +581,16 @@ export const MapTab: React.FC = () => {
               <strong className="text-white text-xs">{activeArea.slope_deg}°</strong>
             </div>
             <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
-              <span className="text-slate-400 block text-[10px]">Bare Soil</span>
+              <span className="text-slate-400 block text-[10px]">Bare Topsoil</span>
               <strong className="text-rose-400 text-xs">{activeArea.bare_soil_pct}%</strong>
             </div>
-            <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
-              <span className="text-slate-400 block text-[10px]">Soil Lost/Year</span>
-              <strong className="text-white text-xs">{activeArea.soil_loss_t_ha_yr} t/ha</strong>
-            </div>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300">
-            <strong className="text-amber-400 block mb-0.5">Primary problem:</strong>
-            {activeArea.main_problem}
           </div>
 
           <button
-            onClick={() => navigate('/rankings')}
-            className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all"
+            onClick={() => navigate('/history')}
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/30 transition-all"
           >
-            <span>See how urgent this area is</span>
+            <span>Proceed to Tab 2: History & News</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -574,7 +603,7 @@ export const MapTab: React.FC = () => {
       <div className="absolute bottom-0 left-0 right-0 z-[400] bg-slate-950/90 backdrop-blur-md border-t border-slate-800 px-4 py-1.5 text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
         <div className="flex items-center space-x-3">
           <span>
-            Coordinates:{' '}
+            GPS Position:{' '}
             <strong className="text-slate-200">
               {mouseCoords ? `${mouseCoords.lat}° N, ${mouseCoords.lng}° E` : 'Hover on map'}
             </strong>
@@ -585,14 +614,13 @@ export const MapTab: React.FC = () => {
           </span>
           <span>•</span>
           <span>
-            Boundary Points: <strong className="text-emerald-400">{fourPoints.length} of 4</strong>
+            Corners Placed: <strong className="text-emerald-400">{fourPoints.length} of 4</strong>
           </span>
         </div>
         <div>
-          <span>Map system: WGS84 (standard GPS coordinates)</span>
+          <span>WGS84 • Live Open-Meteo & Open-Elevation Stream</span>
         </div>
       </div>
     </div>
   );
 };
-
