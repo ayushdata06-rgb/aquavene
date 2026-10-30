@@ -366,8 +366,8 @@
     "semantic_hash": ""
   },
   "frontend/src/api/client.ts": {
-    "mtime": 1793395581.8483262,
-    "seen": 1793395615.9899557,
+    "mtime": 1793395833.5320363,
+    "seen": 1793395959.9539795,
     "ast_hash": "371564628ef6f83da304d74f3221cd00",
     "semantic_hash": ""
   },
@@ -498,9 +498,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1793389110.7502131,
-    "seen": 1793389336.6498387,
-    "ast_hash": "a8d08de4eae275ef3349271b68555fac",
+    "mtime": 1793395940.9892592,
+    "seen": 1793395959.9541273,
+    "ast_hash": "4f7c5365f27a9875cd6877d61db07fda",
     "semantic_hash": ""
   },
   "backend/requirements.txt": {
