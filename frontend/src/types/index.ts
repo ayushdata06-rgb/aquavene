@@ -153,6 +153,16 @@ export interface AuthUser {
   isAuthenticated: boolean;
 }
 
+export interface UserPersona {
+  id: string;
+  fullName: string;
+  email: string;
+  role: 'admin' | 'planner' | 'viewer';
+  title: string;
+  avatarUrl: string;
+  description: string;
+}
+
 export interface AuthStatus {
   auth_enabled: boolean;
   provider: string;

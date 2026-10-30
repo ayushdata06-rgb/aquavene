@@ -12,8 +12,8 @@
     "semantic_hash": ""
   },
   "backend/app/api/auth.py": {
-    "mtime": 1793397024.7650783,
-    "seen": 1793397489.2198539,
+    "mtime": 1793397654.5571258,
+    "seen": 1793399153.7519102,
     "ast_hash": "ddd1a0bc2671b7e4aa86ded3d7b1fb37",
     "semantic_hash": ""
   },
@@ -42,8 +42,8 @@
     "semantic_hash": ""
   },
   "backend/app/api/plans.py": {
-    "mtime": 1793397136.3260398,
-    "seen": 1793397489.2215183,
+    "mtime": 1793397654.6255128,
+    "seen": 1793399153.7533448,
     "ast_hash": "644d2860b72f47581d19cee7372b8890",
     "semantic_hash": ""
   },
@@ -84,8 +84,8 @@
     "semantic_hash": ""
   },
   "backend/app/auth/security.py": {
-    "mtime": 1793396849.3046536,
-    "seen": 1793397489.2241652,
+    "mtime": 1793397654.6598628,
+    "seen": 1793399153.7559505,
     "ast_hash": "f4885ce027b6df720e807a945693d401",
     "semantic_hash": ""
   },
@@ -138,8 +138,8 @@
     "semantic_hash": ""
   },
   "backend/app/schemas/auth.py": {
-    "mtime": 1793396967.617562,
-    "seen": 1793397489.2274623,
+    "mtime": 1793397654.7113795,
+    "seen": 1793399153.7603867,
     "ast_hash": "485b1d13eedb3f4f158269069a96c9c3",
     "semantic_hash": ""
   },
@@ -306,8 +306,8 @@
     "semantic_hash": ""
   },
   "backend/tests/test_api.py": {
-    "mtime": 1793397049.605306,
-    "seen": 1793397489.2373676,
+    "mtime": 1793397654.8317277,
+    "seen": 1793399153.77176,
     "ast_hash": "d9faf2a2c2075716e2e59e11b827d056",
     "semantic_hash": ""
   },
@@ -378,9 +378,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/AuthModal.tsx": {
-    "mtime": 1793123475.6544564,
-    "seen": 1793387920.8443944,
-    "ast_hash": "dd0e268f9b76b7605a7e0a8bba1db660",
+    "mtime": 1793399037.1043975,
+    "seen": 1793399153.7763753,
+    "ast_hash": "6d26f6261dd5cbe1efd8da8e766d3602",
     "semantic_hash": ""
   },
   "frontend/src/components/Layout.tsx": {
@@ -396,9 +396,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/Navbar.tsx": {
-    "mtime": 1793397318.4571078,
-    "seen": 1793397489.24116,
-    "ast_hash": "ec74a3b8681031b67cc330c24f881f4e",
+    "mtime": 1793399074.6536732,
+    "seen": 1793399153.777018,
+    "ast_hash": "4a271a19542f3a825bbf1e5610fbeb86",
     "semantic_hash": ""
   },
   "frontend/src/components/OnboardingModal.tsx": {
@@ -414,9 +414,9 @@
     "semantic_hash": ""
   },
   "frontend/src/context/AuthContext.tsx": {
-    "mtime": 1793397290.1795585,
-    "seen": 1793397489.2417765,
-    "ast_hash": "2489dc7b1dba3adf1c9435397b1db119",
+    "mtime": 1793398998.710178,
+    "seen": 1793399153.7777958,
+    "ast_hash": "ea9d9c3d0311ab4ef409eb0d09d863d1",
     "semantic_hash": ""
   },
   "frontend/src/context/ResearchContext.tsx": {
@@ -462,9 +462,9 @@
     "semantic_hash": ""
   },
   "frontend/src/types/index.ts": {
-    "mtime": 1793394242.2042036,
-    "seen": 1793394561.684937,
-    "ast_hash": "ec8e148a46280a2b1320ccb8f9ca066e",
+    "mtime": 1793398971.0615032,
+    "seen": 1793399153.7819118,
+    "ast_hash": "01f584aae0fb84335949d144442482ee",
     "semantic_hash": ""
   },
   "frontend/tailwind.config.js": {
@@ -618,8 +618,8 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/PlanBudgetTab.tsx": {
-    "mtime": 1793397423.1064527,
-    "seen": 1793397489.243478,
+    "mtime": 1793397655.1111426,
+    "seen": 1793399153.7805715,
     "ast_hash": "7880d63dc845fb08e0a6e7245d85e84e",
     "semantic_hash": ""
   },

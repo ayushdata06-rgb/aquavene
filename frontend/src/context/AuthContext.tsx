@@ -2,7 +2,37 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { apiClient, setAuthToken } from '../api/client';
-import { AuthStatus, AuthUser } from '../types';
+import { AuthStatus, AuthUser, UserPersona } from '../types';
+
+export const PRESET_USERS: UserPersona[] = [
+  {
+    id: 'persona-planner',
+    fullName: 'Dr. Aarav Sharma',
+    email: 'aarav.sharma@aquavane.gov.in',
+    role: 'planner',
+    title: 'District Watershed & Hydrology Planner',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=faces',
+    description: 'Can simulate counterfactual hydrographs, test 5 restoration levers, save certified DPR proposals, and export BoQs.',
+  },
+  {
+    id: 'persona-admin',
+    fullName: 'Priya Patel, IAS',
+    email: 'priya.patel@collectorate.gov.in',
+    role: 'admin',
+    title: 'District Collector & Super Administrator',
+    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&h=120&fit=crop&crop=faces',
+    description: 'Universal authority: save, modify, delete DPRs, elevate user RBAC roles, and manage system database.',
+  },
+  {
+    id: 'persona-viewer',
+    fullName: 'Ramesh Kumar',
+    email: 'ramesh.farmer@grampanchayat.local',
+    role: 'viewer',
+    title: 'Gram Panchayat Citizen & Field Observer',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces',
+    description: 'Read-only transparency access: can inspect live hydrology maps and erosion indices, but cannot mutate or persist plans.',
+  },
+];
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -11,9 +41,12 @@ interface AuthContextType {
   isLoading: boolean;
   isConfigured: boolean;
   authStatus: AuthStatus | null;
+  presetUsers: UserPersona[];
   signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   signInDemo: (role?: string) => void;
+  signInAsPersona: (persona: UserPersona) => void;
+  signInWithRole: (role: 'admin' | 'planner' | 'viewer', customName?: string) => void;
   switchRoleDemo: (role: 'admin' | 'planner' | 'viewer') => void;
 }
 
@@ -158,31 +191,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInDemo = (role: string = 'planner') => {
+    const defaultPersona = PRESET_USERS.find((p) => p.role === role) || PRESET_USERS[0];
     const demoUser: AuthUser = {
-      id: 'google-oauth-demo-001',
-      email: 'planner.karnataka@aquavane.gov.in',
-      fullName: 'Aarav Sharma (Planner)',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
-      role,
-      provider: 'google',
+      id: 'demo-user-session',
+      email: defaultPersona.email,
+      fullName: defaultPersona.fullName,
+      avatarUrl: defaultPersona.avatarUrl,
+      role: defaultPersona.role,
+      provider: 'demo',
       isAuthenticated: true,
     };
     localStorage.setItem('aquavane_demo_user', JSON.stringify(demoUser));
     setUser(demoUser);
   };
 
+  const signInAsPersona = (persona: UserPersona) => {
+    const personaUser: AuthUser = {
+      id: persona.id,
+      email: persona.email,
+      fullName: persona.fullName,
+      avatarUrl: persona.avatarUrl,
+      role: persona.role,
+      provider: 'persona',
+      isAuthenticated: true,
+    };
+    localStorage.setItem('aquavane_demo_user', JSON.stringify(personaUser));
+    setUser(personaUser);
+  };
+
+  const signInWithRole = (role: 'admin' | 'planner' | 'viewer', customName?: string) => {
+    const defaultPersona = PRESET_USERS.find((p) => p.role === role) || PRESET_USERS[0];
+    const newUser: AuthUser = {
+      id: `custom-role-${role}`,
+      email: `${role}.operator@aquavane.gov.in`,
+      fullName: customName || defaultPersona.fullName,
+      avatarUrl: defaultPersona.avatarUrl,
+      role,
+      provider: 'role_select',
+      isAuthenticated: true,
+    };
+    localStorage.setItem('aquavane_demo_user', JSON.stringify(newUser));
+    setUser(newUser);
+  };
+
   const switchRoleDemo = (role: 'admin' | 'planner' | 'viewer') => {
     setUser((prev) => {
+      const defaultPersona = PRESET_USERS.find((p) => p.role === role) || PRESET_USERS[0];
       if (!prev) {
         const newUser: AuthUser = {
-          id: 'demo-user-switched',
-          email: `${role}.watershed@aquavane.gov.in`,
-          fullName:
-            role === 'admin'
-              ? 'District Super Administrator'
-              : role === 'planner'
-              ? 'Lead Watershed Planner'
-              : 'Public Citizen Observer',
+          id: defaultPersona.id,
+          email: defaultPersona.email,
+          fullName: defaultPersona.fullName,
+          avatarUrl: defaultPersona.avatarUrl,
           role,
           provider: 'demo',
           isAuthenticated: true,
@@ -205,9 +265,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isConfigured: isSupabaseConfigured,
         authStatus,
+        presetUsers: PRESET_USERS,
         signInWithGoogle,
         signOut,
         signInDemo,
+        signInAsPersona,
+        signInWithRole,
         switchRoleDemo,
       }}
     >
