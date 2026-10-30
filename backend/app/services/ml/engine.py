@@ -172,12 +172,13 @@ class RestorationMLEngine:
         # Sort by absolute impact
         shap_drivers.sort(key=lambda x: abs(x["impact_pts"]), reverse=True)
 
-        # Model 2: NeuralHydrology EA-LSTM Dynamic Hydrograph Logic
+        # Model 2: NeuralHydrology EA-LSTM Dynamic Hydrograph Logic (Live rainfall series)
         hydrograph, peak_discharge_m3s = self._simulate_hydrograph(
             area_km2=features["area_sq_km"],
             slope_deg=features["mean_slope_deg"],
             rain_30d_mm=features["rainfall_30d_mm"],
             bare_soil_pct=features["bare_soil_pct"],
+            daily_series=features.get("daily_rainfall_series"),
         )
 
         # Model 4: CatBoost Prescriptive Civil Interventions
@@ -253,41 +254,57 @@ class RestorationMLEngine:
         }
 
     def _simulate_hydrograph(
-        self, area_km2: float, slope_deg: float, rain_30d_mm: float, bare_soil_pct: float
+        self,
+        area_km2: float,
+        slope_deg: float,
+        rain_30d_mm: float,
+        bare_soil_pct: float,
+        daily_series: Optional[List[Dict[str, Any]]] = None,
     ) -> Tuple[List[Dict[str, Any]], float]:
-        """Simulate 30-day monsoon daily runoff curve (NeuralHydrology EA-LSTM logic)."""
-        days = 30
-        daily_rain = np.zeros(days)
-
-        # Synthetic realistic monsoon wave profile
-        t = np.linspace(0, math.pi * 2, days)
-        base_wave = np.maximum(0, np.sin(t)) * (rain_30d_mm / 10.0)
-        storm_spike = np.zeros(days)
-        # Peak storm on day 18
-        storm_spike[17] = rain_30d_mm * 0.22
-        storm_spike[18] = rain_30d_mm * 0.15
-        daily_rain = base_wave + storm_spike
-
+        """Simulate 30-day monsoon daily runoff curve using live Open-Meteo series or EA-LSTM curve."""
         # Runoff coefficient based on bare soil and slope
         c_runoff = min(0.85, 0.20 + (bare_soil_pct * 0.005) + (slope_deg * 0.008))
+        alert_threshold = round(area_km2 * 1.8, 1)
 
         points = []
         peak_q = 0.0
-        alert_threshold = round(area_km2 * 1.8, 1)
 
-        for day in range(1, days + 1):
-            rain_mm = round(float(daily_rain[day - 1]), 1)
-            # Rational discharge Q = C * I * A / 3.6
-            discharge = round(float((c_runoff * rain_mm * area_km2) / 3.6), 2)
-            if discharge > peak_q:
-                peak_q = discharge
+        if daily_series and len(daily_series) > 0:
+            for i, item in enumerate(daily_series[:30]):
+                date_label = item.get("date", f"Day {i+1}")
+                rain_mm = round(float(item.get("rainfall_mm", 0.0)), 1)
+                # Rational discharge Q = C * I * A / 3.6
+                discharge = round(float((c_runoff * rain_mm * area_km2) / 3.6), 2)
+                if discharge > peak_q:
+                    peak_q = discharge
 
-            points.append({
-                "day": f"Day {day}",
-                "rainfall_mm": rain_mm,
-                "discharge_m3s": discharge,
-                "flood_alert_threshold": alert_threshold,
-            })
+                points.append({
+                    "day": date_label,
+                    "rainfall_mm": rain_mm,
+                    "discharge_m3s": discharge,
+                    "flood_alert_threshold": alert_threshold,
+                })
+        else:
+            days = 30
+            t = np.linspace(0, math.pi * 2, days)
+            base_wave = np.maximum(0, np.sin(t)) * (rain_30d_mm / 10.0)
+            storm_spike = np.zeros(days)
+            storm_spike[17] = rain_30d_mm * 0.22
+            storm_spike[18] = rain_30d_mm * 0.15
+            daily_rain = base_wave + storm_spike
+
+            for day in range(1, days + 1):
+                rain_mm = round(float(daily_rain[day - 1]), 1)
+                discharge = round(float((c_runoff * rain_mm * area_km2) / 3.6), 2)
+                if discharge > peak_q:
+                    peak_q = discharge
+
+                points.append({
+                    "day": f"Day {day}",
+                    "rainfall_mm": rain_mm,
+                    "discharge_m3s": discharge,
+                    "flood_alert_threshold": alert_threshold,
+                })
 
         return points, peak_q
 

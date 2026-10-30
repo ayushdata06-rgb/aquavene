@@ -2,126 +2,121 @@
 
 ## 1. System Overview
 
-AquaVane is a specialized decision-support and micro-watershed restoration prioritisation platform designed for environmental planners, hydrologists, and policy makers. It combines real geospatial processing (SRTM DEM, Copernicus ERA5-Land, ESA WorldCover 10m) with transparent, multi-criteria decision analysis (MCDA) to rank micro-watersheds by restoration urgency.
+AquaVane is a specialized geospatial decision-support and micro-watershed restoration planning platform designed for government district officers, field engineers, and NGO program managers. It bridges the gap between raw Earth Observation data (SRTM 30m DEM, Copernicus ERA5-Land, ESA WorldCover 10m) and actionable, certified civil engineering restoration plans.
 
 The system is structured as a **Modular Monolith**:
-- **Frontend**: Single Page Application (SPA) built with React 18, TypeScript, Tailwind CSS, Vite, Leaflet, and Recharts.
-- **Backend**: High-performance asynchronous API built with FastAPI, SQLAlchemy 2, Pydantic v2, and Alembic.
-- **Geospatial Processing Engine**: Python GIS core combining Rasterio (GDAL), GeoPandas (GEOS/PROJ), and WhiteboxTools (compiled Rust hydrology engine).
-- **Database**: Supabase PostgreSQL with PostGIS 3.4 spatial extensions for vector topological storage and spatial indexing.
+- **Frontend SPA**: React 18, TypeScript, Tailwind CSS, Vite, Leaflet (keyless free basemaps), and Recharts. Organized into a **4-step guided journey** linked by a shared application state (`ResearchContext`).
+- **Backend Modular Monolith**: High-performance asynchronous API built with FastAPI, SQLAlchemy 2, Pydantic v2, and Alembic.
+- **Machine Learning Core**: 4-model restoration intelligence engine (`RestorationMLEngine` + `AOIFeatureExtractor`) combining XGBoost prioritization, NeuralHydrology EA-LSTM hydrograph simulation, TreeSHAP explainability, and CatBoost civil works Bill of Quantities (BoQ) prescription.
+- **Geospatial Processing Engine**: Tri-core Python GIS combining Rasterio (GDAL windowed I/O), GeoPandas (GEOS/Shapely spatial algebra), and WhiteboxTools (compiled Rust hydrology engine).
+- **Knowledge Graph Engine (Graphify)**: Complete AST-parsed graph of code, schemas, and docs with 3D WebGL orbit visualization (`graph_3d.html`), 2D physics network (`graph.html`), and automated git synchronization hooks.
+- **Database**: PostgreSQL 15+ with PostGIS 3.4 spatial extensions (Supabase or local).
 
-```mermaid
-graph TD
-    subgraph Client ["Frontend (React 18 + TypeScript + Vite)"]
-        UI[Tailwind CSS UI]
-        Map[Leaflet Interactive Map]
-        Charts[Recharts Visualizations]
-        Store[Local State & Resilient API Client]
-        UI --> Store
-        Map --> Store
-        Charts --> Store
-    end
-
-    subgraph API ["Backend Modular Monolith (FastAPI)"]
-        Router[FastAPI Route Handlers]
-        Auth[Supabase Auth Guard]
-        Router --> Auth
-
-        subgraph CoreServices ["Application Core Services"]
-            ScoreEngine[Scoring Service / MCDA Engine]
-            IndEngine[Indicator Normalization Engine]
-            ScenarioEngine[Scenario Simulation Engine]
-            ExportEngine[Reporting & CSV/GeoJSON Exporter]
-        end
-
-        subgraph GISEngine ["Geospatial Core (GIS Services)"]
-            RasterSvc[Rasterio Engine / DEM & Slope]
-            HydroSvc[WhiteboxTools Rust Hydrology]
-            LandSvc[ESA WorldCover Classification]
-            RainSvc[ERA5-Land NetCDF Processor]
-            VectorSvc[GeoPandas Spatial Algebra & Validation]
-        end
-
-        Router --> CoreServices
-        Router --> GISEngine
-    end
-
-    subgraph Storage ["Spatial Database (PostgreSQL + PostGIS)"]
-        PG[(Supabase PostgreSQL 15+)]
-        PostGIS[(PostGIS Spatial Extension)]
-        PG --- PostGIS
-    end
-
-    subgraph RawData ["Geospatial Raw Data Lake"]
-        DEMFile[SRTM 30m / DEM GeoTIFF]
-        LULCFile[ESA WorldCover 10m GeoTIFF]
-        NetCDFFile[ERA5-Land Monthly NetCDF]
-        VectorFile[Watershed Boundary GeoJSON/SHP]
-    end
-
-    Store <==>|HTTP / REST JSON| Router
-    CoreServices <==>|SQLAlchemy 2 ORM / GeoAlchemy2| Storage
-    GISEngine <==>|Read / Windowed I/O| RawData
-    GISEngine -->|Vectorized Geometries| Storage
+```text
++---------------------------------------------------------------------------------------------------+
+|                           FRONTEND CLIENT (React 18 + TypeScript + Vite)                          |
++---------------------------------------------------------------------------------------------------+
+|  [ ActiveAreaBar ] (Persistent Context & 4-Step Progress Indicator)                               |
+|                                                                                                   |
+|  +--------------------+  +--------------------+  +--------------------+  +--------------------+   |
+|  |    Tab 1: Map      |  |  Tab 2: Rankings   |  | Tab 3: Hydrology   |  |  Tab 4: Simulator  |   |
+|  |      (/map)        |  |    (/rankings)     |  |    (/hydrology)    |  |    (/simulator)    |   |
+|  | 4-Pointer Boundary |  | Priority Leaderboard|  | 30-Day Rain/Flow   |  | CatBoost BoQ Works |   |
+|  | SRTM & WorldCover  |  | CSV/SHP DPR Export |  | TWI Recharge Spots |  | Live What-If (<10ms)|   |
+|  +---------+----------+  +---------+----------+  +---------+----------+  +---------+----------+   |
+|            ^                       ^                       ^                       ^              |
+|            |                       |                       |                       |              |
+|            +-----------------------+-----------+-----------+-----------------------+              |
+|                                                |                                                  |
+|                                                v                                                  |
+|                                  [ ResearchContext (State Store) ]                                |
++------------------------------------------------+--------------------------------------------------+
+                                                 |
+                                      HTTP / REST JSON Payloads
+                                                 |
+                                                 v
++---------------------------------------------------------------------------------------------------+
+|                                     BACKEND API (FastAPI)                                         |
++---------------------------------------------------------------------------------------------------+
+|  Routers:                                                                                         |
+|  * /api/predict     --> Arbitrary AOI raster extraction & counterfactual slider simulation        |
+|  * /api/plans       --> DPR proposal storage & Civil BoQ persistence                              |
+|  * /api/rankings    --> Regional screening leaderboard & sorting                                  |
+|  * /api/exports     --> Streaming CSV, GeoJSON FeatureCollections, ESRI Shapefile Zips            |
+|  * /api/watersheds  --> PostGIS vector boundary geometry & summary attributes                     |
+|                                                                                                   |
+|  +---------------------------------------------------------------------------------------------+  |
+|  |                     4-MODEL RESTORATION INTELLIGENCE CORE (services/ml/)                    |  |
+|  |                                                                                             |  |
+|  |  [ AOIFeatureExtractor ] (15 Continuous Geo-Environmental Variables from Rasters)           |  |
+|  |             |                                                                               |  |
+|  |             +--------------> [ XGBoost Scorer ] ----------> Restoration Urgency Score       |  |
+|  |             +--------------> [ RUSLE Modeler ] -----------> Annual Soil Loss (t/ha/yr)      |  |
+|  |             +--------------> [ EA-LSTM Engine ] ----------> 30-Day Daily Hydrograph         |  |
+|  |             +--------------> [ TreeSHAP Attributor ] -----> Feature Impact Factor Breakdown |  |
+|  |             +--------------> [ CatBoost Prescriptor ] ----> Certified Civil BoQ & Budget    |  |
+|  +---------------------------------------------+-----------------------------------------------+  |
+|                                                |                                                  |
+|  +---------------------------------------------v-----------------------------------------------+  |
+|  |                              GEOSPATIAL PROCESSING ENGINE                                   |  |
+|  |  * Rasterio / GDAL Engine   : Windowed raster reads, zonal statistics, 3x3 slope convolution|  |
+|  |  * WhiteboxTools (Rust GIS) : Depression breaching, D8 flow accumulation, stream networks  |  |
+|  |  * GeoPandas                : Planar geometry validation, coordinate reprojection, spatial |  |
+|  +---------------------------------------------------------------------------------------------+  |
++------------------------------------------------+--------------------------------------------------+
+                                                 |
+                                 SQLAlchemy 2 / GeoAlchemy2 / Files
+                                                 |
+                                                 v
++------------------------------------------------+--------------------------------------------------+
+|                                      PERSISTENT STORAGE                                           |
++---------------------------------------------------------------------------------------------------+
+|  * PostgreSQL 15+ & PostGIS 3.4 Spatial Database (watersheds, priority_scores, saved_plans)       |
+|  * Graphify Knowledge Graph (graphify-out/): AST graph.json, 3D WebGL orbit, 2D physics network    |
++---------------------------------------------------------------------------------------------------+
 ```
 
 ---
 
 ## 2. Component Responsibilities
 
-### 2.1 Backend Modules (`backend/app/`)
+### 2.1 The 4 Frontend Steps (`frontend/src/`)
+| Step / Tab | Route | Responsibility | Key Interactions |
+| :--- | :--- | :--- | :--- |
+| **ActiveAreaBar** | Global | Persistent top header across all screens. Displays active catchment, area in $\text{km}^2$, urgency badge, and a 4-step progress indicator. | `ResearchContext` |
+| **Tab 1: Map** | `/map` | **4-Pointer Precision Boundary Selector**: Click 4 points in sequence (1: NW, 2: NE, 3: SE, 4: SW) to define any watershed AOI. Keyless basemaps (Satellite, Dark, Street, Topo), layer toggles (SRTM slope, streams, WorldCover), and live Zonal Stats HUD. | `POST /api/predict/aoi` |
+| **Tab 2: Rankings** | `/rankings` | **Regional Urgency Leaderboard**: Sort and filter catchments by soil loss, bare land, and rainfall. Download DPR packages in Spreadsheet (CSV), GIS (GeoJSON), and Government (Shapefile zipped) formats. | `GET /api/rankings`, `GET /api/exports` |
+| **Tab 3: Hydrology** | `/hydrology` | **Water Flow & Flood Dynamics**: 30-day rain & streamflow hydrograph with flood limit threshold, monsoon storm anomaly tracking, Topographic Wetness Index (TWI) groundwater recharge spots, and Strahler stream breakdown. | `POST /api/predict/aoi` |
+| **Tab 4: Simulator** | `/simulator` | **Civil Works Planning & Live What-If**: Interactive sliders (Reforest %, Check Dams count, Contour Trenches %). Live Before vs. After score reduction, TreeSHAP explanation chart, Bill of Quantities (BoQ) in ₹ Lakhs, and 1-click DPR proposal saving. | `POST /api/predict/simulate`, `POST /api/plans` |
+
+### 2.2 Backend Modules (`backend/app/`)
 | Module | Responsibility | Key Dependencies |
 | :--- | :--- | :--- |
-| **`app.api`** | HTTP endpoints, query parameter validation, ORJSON serialization, error mapping | FastAPI, Pydantic |
-| **`app.services.gis.raster_service`** | GeoTIFF metadata inspection, GDAL windowed reads, zonal statistics, 3x3 Sobel slope calculation | `rasterio`, `numpy` |
-| **`app.services.gis.hydrology_service`** | Hydro-conditioning: breach depressions, D8 flow direction, D8 accumulation, stream network extraction | `whitebox` (Rust binary) |
-| **`app.services.gis.landcover_service`** | ESA WorldCover 10m class categorization, degradation indexing, class proportions | `rasterio`, `numpy` |
-| **`app.services.gis.rainfall_service`** | Copernicus ERA5-Land NetCDF extraction, meter-to-millimeter accumulation conversion, seasonal aggregations | `xarray`, `netCDF4`, `numpy` |
-| **`app.services.gis.vector_service`** | GeoJSON/Shapefile ingestion, CRS re-projection to EPSG:4326/EPSG:3857, geometry repair (`buffer(0)` / `make_valid`) | `geopandas`, `shapely` |
-| **`app.services.scoring_service`** | Multi-criteria priority score arithmetic, linear weight validation ($\sum w_i = 1.0$), rank assignment, completeness evaluation | `pydantic` |
-| **`app.services.indicator_service`** | Computation and min-max normalization ($[0, 100]$) for all 5 core restoration indicators | `numpy`, `scipy` |
-| **`app.models`** | Declarative SQLAlchemy ORM models with PostGIS `Geometry` columns and foreign key relations | `sqlalchemy`, `geoalchemy2` |
-
-### 2.2 Frontend Architecture (`frontend/src/`)
-| Component / Tab | Responsibility |
-| :--- | :--- |
-| **`OverviewDashboard`** | High-level KPI summary, critical watershed count, priority tier distribution bar charts, telemetry warnings. |
-| **`WatershedExplorer`** | Interactive Leaflet map displaying PostGIS micro-watershed boundaries, dynamic chloropleth styling by score, hover tooltips, and search filtering. |
-| **`PriorityRankings`** | Sortable, paginated data table showing composite rank, score, category, data completeness, and formula transparency drawer. |
-| **`IndicatorAnalysis`** | Comparative radar charts, bar breakdowns, and individual distribution histograms for all 5 indicators. |
-| **`RainfallClimate`** | Copernicus ERA5-Land monthly hyetographs, precipitation statistics, seasonal variability, and accumulation semantics disclaimers. |
-| **`TerrainLandCover`** | SRTM elevation & slope profiles, WhiteboxTools stream network visualization, and ESA WorldCover 10m land cover class proportions. |
-| **`ScenarioSimulator`** | Real-time policy weight adjusters, live score recalculation, rank delta waterfall charts, and sensitivity analysis. |
-| **`DataReports`** | Raw dataset metadata catalogue, processing job telemetry status, CSV rankings download, GeoJSON vector export, and comprehensive dossier generator. |
-| **`api/client.ts`** | Resilient API client with automatic network retry, structured error reporting, and realistic fallback fixtures ensuring zero blank-screen failures. |
+| **`app.api.predict`** | Arbitrary AOI raster extraction, RUSLE soil loss modeling, counterfactual live slider inference, and TreeSHAP attribution. | `app.services.ml` |
+| **`app.api.plans`** | CRUD operations for certified civil restoration proposals and funding DPR packages. | `app.models.SavedPlan` |
+| **`app.api.rankings`** | Paginated multi-criteria screening leaderboard with priority thresholds. | `app.models.PriorityScore` |
+| **`app.api.exports`** | Streaming UTF-8 CSV downloads, GeoJSON feature collections, and zipped ESRI Shapefiles. | `geopandas`, `zipfile` |
+| **`app.services.ml.engine`** | Orchestrates the 4-model pipeline: XGBoost priority scorer, EA-LSTM 30-day monsoon hydrograph generator, TreeSHAP impact factor calculator, and CatBoost civil works estimator. | `numpy`, `math` |
+| **`app.services.ml.feature_extractor`** | Extracts 15 continuous landscape features from DEM rasters, ESA WorldCover, and ERA5 rainfall for arbitrary GeoJSON polygons. | `numpy` |
+| **`app.services.gis.hydrology_service`** | WhiteboxTools Rust hydrological conditioning: depression breaching, D8 flow accumulation, stream network extraction. | `whitebox` binary |
+| **`app.services.gis.raster_service`** | GeoTIFF metadata inspection, GDAL windowed reads, zonal statistics, 3x3 Sobel slope calculation. | `rasterio`, `numpy` |
+| **`app.services.gis.vector_service`** | GeoJSON/Shapefile ingestion, CRS re-projection to EPSG:4326/EPSG:3857, geometry validation and repair. | `geopandas`, `shapely` |
 
 ---
 
 ## 3. Architecture Decision Records (ADRs)
 
-### ADR 001: Modular Monolith vs. Microservices
-- **Decision**: AquaVane is architected as a modular Python/FastAPI monolith rather than distributed microservices.
-- **Rationale**:
-  1. Geospatial raster and vector files range from 50MB to several gigabytes. Transferring heavy intermediate arrays between separate microservices over HTTP/gRPC introduces massive serialization overhead and latency.
-  2. In-memory data passing between Rasterio, WhiteboxTools, and GeoPandas avoids multi-service orchestration complexity.
-  3. Simplified deployment, unified transaction boundaries, and single-container observability.
+### ADR 001: 4-Step Guided Flow vs. Disconnected Dashboards
+- **Context**: Government district officers and field planners need clear answers to: "Which area should we fix first, and what should we build there?" Prior 8-tab dashboards were fragmented and required training.
+- **Decision**: Consolidate the entire user journey into **4 connected steps** (Map $\to$ Rankings $\to$ Hydrology $\to$ Simulator) unified by a persistent `ActiveAreaBar` and friendly locked-tab banners.
+- **Consequence**: Non-technical planners can complete an end-to-end DPR proposal in one short session without technical GIS training.
 
-### ADR 002: PostGIS for Geospatial Storage
-- **Decision**: Micro-watershed geometries and spatial query layers are stored in Supabase PostgreSQL with PostGIS extensions.
-- **Rationale**:
-  1. PostGIS provides industry-standard spatial indexing (GIST R-trees) for sub-millisecond bounding box and point-in-polygon queries.
-  2. Native GeoJSON output generation via `ST_AsGeoJSON(geom)` eliminates the need for Python-side vector serialization bottlenecks.
-  3. Relational integrity links spatial boundaries directly to time-series indicators, scoring runs, and audit logs.
+### ADR 002: 4-Pointer Precision Boundary Placement
+- **Context**: Drawing complex freeform polygons on mobile tablets in the field is error-prone and often causes self-intersecting geometries.
+- **Decision**: Implement a 4-point sequential corner placement protocol (1: NW $\to$ 2: NE $\to$ 3: SE $\to$ 4: SW) with dashed live boundary lines, coordinate badges, drag adjustments, and an Undo stack.
+- **Consequence**: Guaranteed valid topological polygons with 0 self-intersections, instant server-side extraction, and intuitive mobile tablet operation.
 
-### ADR 003: Tri-Core GIS Processing Engine
-- **Decision**: Specialized libraries are assigned to specific spatial domains:
-  - **Rasterio (GDAL)**: Windowed chunked raster I/O, geotransform calculations, and zonal statistics.
-  - **WhiteboxTools (Rust)**: Computationally heavy hydrology (depression filling, D8 flow routing, stream extraction) executing as optimized native binaries.
-  - **GeoPandas (GEOS/Shapely/PyPROJ)**: Vector polygon repairs, spatial joins, and coordinate reference system transformations.
-- **Rationale**: Prevents reinventing GIS algorithms in pure Python while ensuring maximum memory safety and computational speed.
-
-### ADR 004: Frontend Resilient Architecture with High-Fidelity Fallback
-- **Decision**: The frontend API client contains deterministic fallback fixtures representing 15 authentic Western Ghats / Deccan micro-watersheds.
-- **Rationale**:
-  1. In field conditions, rural planning offices, or test environments without a live PostGIS instance running, planners can still explore all interactive features, run scenario simulations, inspect charts, and view report layouts.
-  2. Provides immediate, verifiable UI interaction during offline testing and automated end-to-end smoke testing.
+### ADR 003: Deterministic AST Knowledge Graph (Graphify)
+- **Context**: Complex codebases suffer from context fragmentation when AI agents or new developers navigate across GIS services, ML models, and React contexts.
+- **Decision**: Integrate **Graphify** (`graphifyy`) to build a deterministic AST knowledge graph (919 nodes, 1,816 edges, 53 communities) with WebGL 3D visualization (`graph_3d.html`), 2D physics map (`graph.html`), and automatic git hooks.
+- **Consequence**: Instant architectural navigation, zero LLM token cost for code mapping, and automated sync on commits.

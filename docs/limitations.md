@@ -20,17 +20,21 @@
 
 AquaVane harmonizes multi-source datasets with inherently different spatial and temporal resolutions:
 
-```mermaid
-graph LR
-    SRTM["SRTM DEM<br/><b>30m Resolution</b>"]
-    ESA["ESA WorldCover<br/><b>10m Resolution</b>"]
-    ERA5["Copernicus ERA5-Land<br/><b>~9km (0.1°) Resolution</b>"]
-    
-    Harmonized["Zonal Aggregation Engine<br/>Micro-Watershed Extent (5 - 50 km²)"]
-    
-    SRTM --> Harmonized
-    ESA --> Harmonized
-    ERA5 --> Harmonized
+```text
+  +-------------------------+
+  |        SRTM DEM         |
+  |     30m Resolution      |----+
+  +-------------------------+    |
+                                 |
+  +-------------------------+    |       +------------------------------------+
+  |     ESA WorldCover      |    +-----> |     Zonal Aggregation Engine       |
+  |     10m Resolution      |----------> |  Micro-Watershed Extent (5-50 km²) |
+  +-------------------------+    |       +------------------------------------+
+                                 |
+  +-------------------------+    |
+  |   Copernicus ERA5-Land  |----+
+  |  ~9km (0.1°) Resolution |
+  +-------------------------+
 ```
 
 ### 2.1 The ERA5-Land Resolution Discrepancy

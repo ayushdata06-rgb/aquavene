@@ -75,3 +75,8 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+
+# Graphify
+graphify-out/cache/
+graphify-out/.*

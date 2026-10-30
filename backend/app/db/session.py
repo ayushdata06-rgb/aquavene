@@ -11,21 +11,35 @@ from app.config import get_settings
 
 
 def _get_engine():
-    """Create SQLAlchemy engine from settings."""
+    """Create SQLAlchemy engine with cloud compatibility for Render / Supabase."""
     settings = get_settings()
-    connect_args = {}
-    if "postgres" in settings.database_url:
-        connect_args["connect_timeout"] = 2
+    db_url = settings.database_url or "sqlite:///./aquavene.db"
 
-    engine = create_engine(
-        settings.database_url,
-        echo=settings.debug,
-        pool_pre_ping=False,
-        pool_size=5,
-        max_overflow=10,
-        pool_recycle=300,
-        connect_args=connect_args,
-    )
+    # Normalize Render's 'postgres://' or standard 'postgresql://' to use psycopg3
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    connect_args = {}
+    if "postgres" in db_url:
+        connect_args["connect_timeout"] = 5
+        engine = create_engine(
+            db_url,
+            echo=settings.debug,
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=10,
+            pool_recycle=300,
+            connect_args=connect_args,
+        )
+    else:
+        connect_args["check_same_thread"] = False
+        engine = create_engine(
+            db_url,
+            echo=settings.debug,
+            connect_args=connect_args,
+        )
     return engine
 
 
