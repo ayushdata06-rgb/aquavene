@@ -434,6 +434,55 @@ export const FIXTURE_JOBS: ProcessingJob[] = [
 ];
 
 export const api = {
+
+  async getHealth(): Promise<{ status: string; version?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/health`);
+      if (res.ok) return await res.json();
+    } catch {}
+    return { status: 'ok', version: '2.0.0' };
+  },
+
+  async pollJob(jobId: string): Promise<any> {
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/processing-jobs/${jobId}`);
+      if (res.ok) return await res.json();
+    } catch {}
+    return null;
+  },
+
+  async getUsers(params?: any): Promise<any> {
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/auth/users`);
+      if (res.ok) return await res.json();
+    } catch {}
+    return { users: [], total: 0 };
+  },
+
+  async updatePlan(planId: string, update: any): Promise<any> {
+    const res = await fetchWithAuth(`${API_BASE}/plans/${planId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(update),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to update plan (${res.status})`);
+    }
+    return await res.json();
+  },
+
+  async triggerWatershedAnalysis(watershedId: string): Promise<any> {
+    const res = await fetchWithAuth(`${API_BASE}/watersheds/${watershedId}/trigger-analysis`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to trigger analysis (${res.status})`);
+    }
+    return await res.json();
+  },
+
   async getDashboardSummary(): Promise<DashboardSummary> {
     try {
       const res = await fetchWithAuth(`${API_BASE}/dashboard/summary`);

@@ -1,13 +1,10 @@
-"""SQLAlchemy models for AquaVane.
-
-All tables defined here with proper constraints, indexes, and PostGIS geometry columns.
-"""
+"""SQLAlchemy models for AquaVane 2.0 with PostGIS geometries and RBAC constraints."""
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone
+from typing import List, Optional
 
 from geoalchemy2 import Geometry
 from sqlalchemy import (
@@ -25,13 +22,13 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym
 
 from app.db.base import Base
 
 
 class Profile(Base):
-    """User profile, references Supabase auth.users when auth is enabled."""
+    """User profile referencing Supabase auth.users with strict RBAC role check."""
 
     __tablename__ = "profiles"
 
@@ -40,18 +37,29 @@ class Profile(Base):
     )
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="viewer"
+        String(50),
+        CheckConstraint("role IN ('admin', 'planner', 'officer', 'viewer')", name="ck_profile_role"),
+        nullable=False,
+        default="viewer",
+        index=True,
     )
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    department: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    last_active: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+    # Relationships
+    saved_plans = relationship("SavedPlan", back_populates="creator", foreign_keys="SavedPlan.created_by")
 
 
 class Watershed(Base):
-    """Watershed / micro-watershed boundary with geometry."""
+    """Watershed / micro-watershed spatial boundary with PostGIS geometry and terrain metrics."""
 
     __tablename__ = "watersheds"
 
@@ -61,18 +69,24 @@ class Watershed(Base):
     watershed_code: Mapped[str] = mapped_column(
         String(100), unique=True, nullable=False, index=True
     )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    country: Mapped[Optional[str]] = mapped_column(String(100))
+    name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    country: Mapped[Optional[str]] = mapped_column(String(100), default="India")
     state: Mapped[Optional[str]] = mapped_column(String(100), index=True)
     district: Mapped[Optional[str]] = mapped_column(String(100), index=True)
     basin_name: Mapped[Optional[str]] = mapped_column(String(255), index=True)
-    area_sq_km: Mapped[Optional[float]] = mapped_column(Float)
-    geom = Column(
-        Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=True
-    )
-    centroid = Column(
-        Geometry(geometry_type="POINT", srid=4326), nullable=True
-    )
+    sub_basin: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    area_sq_km: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    perimeter_km: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    mean_elevation_m: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    mean_slope_deg: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    drainage_density: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    priority_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    risk_level: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, index=True)
+    last_processed: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    geom = Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=True)
+    centroid = Column(Geometry(geometry_type="POINT", srid=4326), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -81,116 +95,17 @@ class Watershed(Base):
     )
 
     # Relationships
-    indicators = relationship("WatershedIndicator", back_populates="watershed")
-    priority_scores = relationship("PriorityScore", back_populates="watershed")
+    indicators = relationship("WatershedIndicator", back_populates="watershed", cascade="all, delete-orphan")
+    priority_scores = relationship("PriorityScore", back_populates="watershed", cascade="all, delete-orphan")
+    saved_plans = relationship("SavedPlan", back_populates="watershed")
 
     __table_args__ = (
         Index("idx_watersheds_geom", "geom", postgresql_using="gist"),
     )
 
 
-class Dataset(Base):
-    """Registered source dataset with full provenance."""
-
-    __tablename__ = "datasets"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    dataset_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    provider: Mapped[Optional[str]] = mapped_column(String(255))
-    dataset_type: Mapped[str] = mapped_column(
-        String(50), nullable=False
-    )  # 'raster', 'vector', 'netcdf', 'tabular'
-    source_url: Mapped[Optional[str]] = mapped_column(Text)
-    licence_or_attribution: Mapped[Optional[str]] = mapped_column(Text)
-    reference_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    reference_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    native_resolution: Mapped[Optional[str]] = mapped_column(String(100))
-    units: Mapped[Optional[str]] = mapped_column(String(100))
-    crs: Mapped[Optional[str]] = mapped_column(String(50))
-    file_format: Mapped[Optional[str]] = mapped_column(String(50))
-    storage_path: Mapped[Optional[str]] = mapped_column(Text)
-    checksum: Mapped[Optional[str]] = mapped_column(String(128))
-    metadata_json: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict)
-    status: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="registered"
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-
-    # Relationships
-    versions = relationship("DatasetVersion", back_populates="dataset")
-    processing_jobs = relationship("ProcessingJob", back_populates="dataset")
-
-
-class DatasetVersion(Base):
-    """Tracks versions / ingestion records for a dataset."""
-
-    __tablename__ = "dataset_versions"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    dataset_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("datasets.id", ondelete="CASCADE"), nullable=False
-    )
-    version_tag: Mapped[str] = mapped_column(String(100), nullable=False)
-    checksum: Mapped[Optional[str]] = mapped_column(String(128))
-    imported_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    validation_status: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="pending"
-    )
-    processing_version: Mapped[Optional[str]] = mapped_column(String(100))
-    provenance_json: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict)
-
-    dataset = relationship("Dataset", back_populates="versions")
-
-    __table_args__ = (
-        UniqueConstraint("dataset_id", "version_tag", name="uq_dataset_version"),
-    )
-
-
-class ProcessingJob(Base):
-    """Processing job tracking with status, progress, and errors."""
-
-    __tablename__ = "processing_jobs"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    dataset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("datasets.id", ondelete="SET NULL"), nullable=True
-    )
-    job_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="pending"
-    )  # pending, running, completed, failed
-    progress: Mapped[float] = mapped_column(Float, default=0.0)
-    parameters_json: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict)
-    output_metadata_json: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict)
-    error_summary: Mapped[Optional[str]] = mapped_column(Text)
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
-
-    dataset = relationship("Dataset", back_populates="processing_jobs")
-
-    __table_args__ = (
-        CheckConstraint(
-            "progress >= 0 AND progress <= 100", name="ck_job_progress_range"
-        ),
-    )
-
-
 class WatershedIndicator(Base):
-    """Calculated indicator value for a watershed."""
+    """Raw physical, hydrological, and vulnerability indicator time-series."""
 
     __tablename__ = "watershed_indicators"
 
@@ -201,42 +116,139 @@ class WatershedIndicator(Base):
         UUID(as_uuid=True),
         ForeignKey("watersheds.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
-    dataset_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("datasets.id", ondelete="SET NULL")
+    indicator_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    unit: Mapped[str] = mapped_column(String(30), default="")
+    measured_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    indicator_code: Mapped[str] = mapped_column(
-        String(100), nullable=False, index=True
-    )  # erosion_potential, runoff_potential, landcover_degradation, rainfall_pressure, downstream_exposure
-    raw_value: Mapped[Optional[float]] = mapped_column(Float)
-    normalized_score: Mapped[Optional[float]] = mapped_column(Float)
-    unit: Mapped[Optional[str]] = mapped_column(String(50))
-    reference_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    reference_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    method_version: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="v1.0"
-    )
-    quality_status: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="computed"
-    )  # computed, estimated, missing, flagged
-    uncertainty_note: Mapped[Optional[str]] = mapped_column(Text)
-    calculated_at: Mapped[datetime] = mapped_column(
+    source: Mapped[str] = mapped_column(String(100), default="ISRO-BHUVAN/IMD")
+    raster_resolution_m: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # Legacy compatibility fields
+    indicator_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    raw_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    normalized_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
     watershed = relationship("Watershed", back_populates="indicators")
 
-    __table_args__ = (
-        UniqueConstraint(
-            "watershed_id",
-            "indicator_code",
-            "method_version",
-            "reference_start",
-            "reference_end",
-            name="uq_watershed_indicator",
-        ),
-        Index("idx_indicator_code", "indicator_code"),
+
+class ProcessingJob(Base):
+    """Asynchronous background geospatial and ML processing job."""
+
+    __tablename__ = "processing_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), nullable=True, index=True
+    )
+    watershed_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("watersheds.id", ondelete="SET NULL"), nullable=True
+    )
+    job_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)
+    progress_pct: Mapped[int] = mapped_column(Integer, default=0)
+    input_geojson = Column(JSONB, default=dict)
+    result_json = Column(JSONB, nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at = synonym("completed_at")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class SavedPlan(Base):
+    """Certified civil restoration plan, detailed project report (DPR), and itemized BoQ."""
+
+    __tablename__ = "saved_plans"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    watershed_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("watersheds.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    area_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    area_sq_km: Mapped[float] = mapped_column(Float, nullable=False)
+    state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    district: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    geojson_aoi = Column(JSONB, default=dict)
+
+    original_score: Mapped[float] = mapped_column(Float, nullable=False)
+    simulated_score: Mapped[float] = mapped_column(Float, nullable=False)
+    score_improvement_pct: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    original_peak_discharge_m3s: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    simulated_peak_discharge_m3s: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    original_soil_loss_t_ha_yr: Mapped[float] = mapped_column(Float, default=25.0)
+    simulated_soil_loss_t_ha_yr: Mapped[float] = mapped_column(Float, default=10.0)
+
+    # 6 Key Restoration Levers
+    reforest_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    check_dams_count: Mapped[int] = mapped_column(Integer, default=0)
+    cct_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    stream_repair_km: Mapped[Optional[float]] = mapped_column(Float, default=0.0)
+    road_stabilisation_km: Mapped[Optional[float]] = mapped_column(Float, default=0.0)
+    cover_crop_pct: Mapped[Optional[float]] = mapped_column(Float, default=0.0)
+
+    budget_lakhs_inr: Mapped[float] = mapped_column(Float, nullable=False)
+    scheme: Mapped[str] = mapped_column(String(50), default="MGNREGA")
+    interventions_json = Column(JSONB, default=list)
+
+    # Phased Activities
+    phase_1_activities = Column(JSONB, nullable=True)
+    phase_2_activities = Column(JSONB, nullable=True)
+    phase_3_activities = Column(JSONB, nullable=True)
+
+    # Approval Workflow
+    dpr_status: Mapped[str] = mapped_column(String(20), default="draft", index=True)
+    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    watershed = relationship("Watershed", back_populates="saved_plans")
+    creator = relationship("Profile", foreign_keys=[created_by], back_populates="saved_plans")
+    approver = relationship("Profile", foreign_keys=[approved_by])
+
+
+class Dataset(Base):
+    """Registered source dataset with provenance catalog."""
+
+    __tablename__ = "datasets"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    dataset_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    dataset_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    source_agency: Mapped[str] = mapped_column(String(100), nullable=False)
+    resolution: Mapped[Optional[str]] = mapped_column(String(100))
+    coverage: Mapped[Optional[str]] = mapped_column(String(100), default="India")
+    storage_path: Mapped[Optional[str]] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
 
 
 class ScoringProfile(Base):
@@ -249,7 +261,7 @@ class ScoringProfile(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
-    weights_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    weights_json = Column(JSONB, nullable=False, default=dict)
     indicator_schema_version: Mapped[str] = mapped_column(
         String(50), nullable=False, default="v1.0"
     )
@@ -262,93 +274,74 @@ class ScoringProfile(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-
 class ScoringRun(Base):
-    """Record of a scoring execution."""
+    """Execution run of composite watershed prioritisation scoring."""
 
     __tablename__ = "scoring_runs"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    scoring_profile_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("scoring_profiles.id", ondelete="CASCADE"),
-        nullable=False,
+    run_name: Mapped[Optional[str]] = mapped_column(String(255), default="Default Run")
+    scoring_profile_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scoring_profiles.id", ondelete="SET NULL"), nullable=True
     )
-    reference_period_start: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True)
-    )
-    reference_period_end: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True)
-    )
-    method_version: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="v1.0"
-    )
-    status: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="pending"
-    )
-    input_dataset_versions_json: Mapped[Optional[dict]] = mapped_column(
-        JSONB, default=dict
+    method_version: Mapped[str] = mapped_column(String(50), default="v1.0")
+    run_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(50), default="completed")
+    weights_used = Column(JSONB, nullable=True, default=dict)
+    input_dataset_versions_json = Column(JSONB, nullable=True, default=dict)
 
     scoring_profile = relationship("ScoringProfile")
-    priority_scores = relationship("PriorityScore", back_populates="scoring_run")
+    scores = relationship("PriorityScore", back_populates="run", cascade="all, delete-orphan")
 
 
 class PriorityScore(Base):
-    """Priority score result for a watershed in a scoring run."""
+    """Calculated composite score and rank for a micro-watershed."""
 
     __tablename__ = "priority_scores"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    scoring_run_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("scoring_runs.id", ondelete="CASCADE"),
-        nullable=False,
-    )
     watershed_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("watersheds.id", ondelete="CASCADE"),
-        nullable=False,
+        UUID(as_uuid=True), ForeignKey("watersheds.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    scoring_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scoring_runs.id", ondelete="CASCADE"), nullable=False, index=True
     )
     overall_score: Mapped[float] = mapped_column(Float, nullable=False)
-    priority_category: Mapped[str] = mapped_column(
-        String(50), nullable=False
-    )  # critical, high, medium, low
+    priority_category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     rank_position: Mapped[int] = mapped_column(Integer, nullable=False)
-    indicator_breakdown_json: Mapped[Optional[dict]] = mapped_column(
-        JSONB, default=dict
-    )
+    indicator_scores = Column(JSONB, default=dict)
     data_completeness: Mapped[float] = mapped_column(Float, default=1.0)
     calculated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-
-    scoring_run = relationship("ScoringRun", back_populates="priority_scores")
-    watershed = relationship("Watershed", back_populates="priority_scores")
-
-    __table_args__ = (
-        UniqueConstraint(
-            "scoring_run_id", "watershed_id", name="uq_score_run_watershed"
-        ),
-        CheckConstraint(
-            "overall_score >= 0 AND overall_score <= 100",
-            name="ck_score_range",
-        ),
-        CheckConstraint(
-            "data_completeness >= 0 AND data_completeness <= 1",
-            name="ck_data_completeness_range",
-        ),
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )
+
+    # Aliases for compatibility
+    @property
+    def run_id(self):
+        return self.scoring_run_id
+
+    @property
+    def indicator_breakdown_json(self):
+        return self.indicator_scores
+
+    watershed = relationship("Watershed", back_populates="priority_scores")
+    run = relationship("ScoringRun", back_populates="scores")
+    scoring_run = relationship("ScoringRun", viewonly=True)
 
 
 class Scenario(Base):
-    """Policy scenario for weight sensitivity analysis."""
+    """What-if intervention scenario comparison model."""
 
     __tablename__ = "scenarios"
 
@@ -357,27 +350,18 @@ class Scenario(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
-    baseline_scoring_run_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("scoring_runs.id", ondelete="SET NULL")
+    base_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scoring_runs.id", ondelete="CASCADE"), nullable=False
     )
-    weights_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    assumptions_json: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict)
-    status: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="draft"
-    )  # draft, running, completed, failed
-    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
+    weight_adjustments = Column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-
-    results = relationship("ScenarioResult", back_populates="scenario")
+    results = relationship("ScenarioResult", back_populates="scenario", cascade="all, delete-orphan")
 
 
 class ScenarioResult(Base):
-    """Comparison result for a watershed in a scenario vs baseline."""
+    """Result per watershed for a what-if scenario."""
 
     __tablename__ = "scenario_results"
 
@@ -385,14 +369,10 @@ class ScenarioResult(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     scenario_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("scenarios.id", ondelete="CASCADE"),
-        nullable=False,
+        UUID(as_uuid=True), ForeignKey("scenarios.id", ondelete="CASCADE"), nullable=False
     )
     watershed_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("watersheds.id", ondelete="CASCADE"),
-        nullable=False,
+        UUID(as_uuid=True), ForeignKey("watersheds.id", ondelete="CASCADE"), nullable=False
     )
     baseline_score: Mapped[float] = mapped_column(Float, nullable=False)
     scenario_score: Mapped[float] = mapped_column(Float, nullable=False)
@@ -400,47 +380,9 @@ class ScenarioResult(Base):
     scenario_rank: Mapped[int] = mapped_column(Integer, nullable=False)
     score_delta: Mapped[float] = mapped_column(Float, nullable=False)
     rank_delta: Mapped[int] = mapped_column(Integer, nullable=False)
-    indicator_breakdown_json: Mapped[Optional[dict]] = mapped_column(
-        JSONB, default=dict
-    )
+    indicator_breakdown_json = Column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
     scenario = relationship("Scenario", back_populates="results")
-
-    __table_args__ = (
-        UniqueConstraint(
-            "scenario_id", "watershed_id", name="uq_scenario_watershed"
-        ),
-    )
-
-
-class SavedPlan(Base):
-    """Certified civil restoration plan and DPR proposal."""
-
-    __tablename__ = "saved_plans"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    watershed_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("watersheds.id", ondelete="SET NULL"), nullable=True
-    )
-    area_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    area_sq_km: Mapped[float] = mapped_column(Float, nullable=False)
-    original_score: Mapped[float] = mapped_column(Float, nullable=False)
-    simulated_score: Mapped[float] = mapped_column(Float, nullable=False)
-    original_soil_loss: Mapped[float] = mapped_column(Float, nullable=False)
-    simulated_soil_loss: Mapped[float] = mapped_column(Float, nullable=False)
-    reforest_pct: Mapped[float] = mapped_column(Float, default=0.0)
-    check_dams_count: Mapped[int] = mapped_column(Integer, default=0)
-    cct_pct: Mapped[float] = mapped_column(Float, default=0.0)
-    budget_lakhs_inr: Mapped[float] = mapped_column(Float, nullable=False)
-    interventions_json: Mapped[Optional[list]] = mapped_column(JSONB, default=list)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
-
-    watershed = relationship("Watershed")

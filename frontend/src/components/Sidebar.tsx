@@ -1,176 +1,180 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Map,
-  BookOpen,
+  MapPin,
+  History,
   Mountain,
   Trees,
-  Fish,
+  Waves,
   Tractor,
-  Sliders,
-  FileCheck2,
-  ChevronLeft,
-  ChevronRight,
-  AlertTriangle,
+  Activity,
+  FileText,
+  Shield,
+  Lock,
+  CheckCircle2,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
+import { useAuth } from '../context/AuthContext';
 
 export const TABS = [
   {
-    step: 1,
+    step: 0,
     id: 'map',
-    name: '1. Map & Draw',
-    subtitle: 'Locate & Draw AOI',
+    name: 'AOI Selection',
     path: '/map',
-    icon: Map,
-    color: 'text-emerald-400',
+    icon: MapPin,
+  },
+  {
+    step: 1,
+    id: 'history',
+    name: 'Water History',
+    path: '/history',
+    icon: History,
   },
   {
     step: 2,
-    id: 'history',
-    name: '2. History & News',
-    subtitle: 'Catchment Memory',
-    path: '/history',
-    icon: BookOpen,
-    color: 'text-amber-400',
+    id: 'terrain',
+    name: 'Terrain Health',
+    path: '/terrain',
+    icon: Mountain,
   },
   {
     step: 3,
-    id: 'terrain',
-    name: '3. Terrain & Health',
-    subtitle: 'Slopes & 30d Rain',
-    path: '/terrain',
-    icon: Mountain,
-    color: 'text-sky-400',
+    id: 'reforest',
+    name: 'Reforestation',
+    path: '/reforest',
+    icon: Trees,
   },
   {
     step: 4,
-    id: 'reforest',
-    name: '4. Forest & Trees',
-    subtitle: 'Pillar 1: Native Cover',
-    path: '/reforest',
-    icon: Trees,
-    color: 'text-emerald-400',
+    id: 'streams',
+    name: 'Streams & Wetlands',
+    path: '/streams',
+    icon: Waves,
   },
   {
     step: 5,
-    id: 'streams',
-    name: '5. Streams & Fish',
-    subtitle: 'Pillars 2 & 3: Bio-Repair',
-    path: '/streams',
-    icon: Fish,
-    color: 'text-cyan-400',
+    id: 'farms',
+    name: 'Farms & Roads',
+    path: '/farms',
+    icon: Tractor,
   },
   {
     step: 6,
-    id: 'land-roads',
-    name: '6. Farms & Roads',
-    subtitle: 'Pillars 4 & 5: Silt Arrest',
-    path: '/land-roads',
-    icon: Tractor,
-    color: 'text-orange-400',
+    id: 'simulator',
+    name: 'Simulator',
+    path: '/simulator',
+    icon: Activity,
   },
   {
     step: 7,
-    id: 'simulator',
-    name: '7. Simulator',
-    subtitle: 'Test 5 Levers Live',
-    path: '/simulator',
-    icon: Sliders,
-    color: 'text-purple-400',
-  },
-  {
-    step: 8,
-    id: 'plan',
-    name: '8. Plan & Budget',
-    subtitle: 'Official BoQ & DPR',
-    path: '/plan',
-    icon: FileCheck2,
-    color: 'text-teal-400',
+    id: 'budget',
+    name: 'DPR & Budget',
+    path: '/budget',
+    icon: FileText,
   },
 ];
 
 export const Sidebar: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
-  const { isAreaSelected } = useResearch();
+  const { activeArea, setActiveTab } = useResearch();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   return (
-    <aside
-      className={`bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 transition-all duration-300 relative z-30 select-none ${
-        collapsed ? 'w-16' : 'w-64'
-      }`}
-    >
-      <div className="p-3 space-y-3 overflow-y-auto scrollbar-none flex-1">
-        {/* Toggle Button */}
-        <div className="flex items-center justify-between px-2 pt-1">
-          {!collapsed && (
-            <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-              8-Step Restoration Tool
-            </p>
-          )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ml-auto"
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
+    <aside className="w-60 bg-hydro-card border-r border-hydro-border/70 flex flex-col justify-between select-none z-20">
+      {/* Tab Navigation List */}
+      <div className="py-4 space-y-1 px-3">
+        <div className="px-3 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">
+          Hydrological Workflow
         </div>
 
-        {/* 8 Navigation Tabs */}
-        <nav className="space-y-1">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <NavLink
-                key={tab.id}
-                to={tab.path}
-                title={collapsed ? `${tab.name} (${tab.subtitle})` : undefined}
-                className={({ isActive }) =>
-                  `flex items-center rounded-xl text-xs font-semibold transition-all group ${
-                    collapsed ? 'justify-center p-2.5' : 'space-x-3 px-3 py-2'
-                  } ${
-                    isActive
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
-                  }`
-                }
-              >
-                <div className="relative shrink-0 flex items-center justify-center">
-                  <Icon className={`h-4 w-4 ${tab.color}`} />
-                  <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-slate-800 text-[9px] font-bold text-slate-300 flex items-center justify-center border border-slate-700">
-                    {tab.step}
-                  </span>
-                </div>
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isLocked = tab.step > 0 && !activeArea;
 
-                {!collapsed && (
-                  <div className="truncate">
-                    <span className="block font-bold text-white text-xs leading-none">
-                      {tab.name}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5 leading-none truncate">
-                      {tab.subtitle}
-                    </span>
-                  </div>
-                )}
-              </NavLink>
-            );
-          })}
-        </nav>
+          return (
+            <NavLink
+              key={tab.id}
+              to={isLocked ? '#' : tab.path}
+              onClick={(e) => {
+                if (isLocked) {
+                  e.preventDefault();
+                  alert('Define an Area of Interest (AOI) on the map first to unlock this hydrological analysis module.');
+                  return;
+                }
+                setActiveTab(tab.step);
+              }}
+              className={({ isActive }) =>
+                `group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                  isLocked
+                    ? 'opacity-40 text-slate-500 hover:bg-transparent cursor-not-allowed'
+                    : isActive
+                    ? 'bg-hydro-panel border-l-4 border-aqua-500 text-white font-semibold shadow-md'
+                    : 'text-slate-300 hover:text-white hover:bg-hydro-panel/60 border-l-4 border-transparent'
+                }`
+              }
+            >
+              <div className="flex items-center gap-3">
+                <Icon className={`w-4 h-4 ${isLocked ? 'text-slate-500' : 'text-aqua-400'}`} />
+                <span>{tab.name}</span>
+              </div>
+
+              {isLocked ? (
+                <Lock className="w-3.5 h-3.5 text-slate-600" />
+              ) : activeArea && tab.step > 0 ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 opacity-80" />
+              ) : null}
+            </NavLink>
+          );
+        })}
+
+        {/* Administrator Tab */}
+        {isAdmin && (
+          <div className="pt-3 border-t border-hydro-border/60">
+            <NavLink
+              to="/admin"
+              onClick={() => setActiveTab(8)}
+              className={({ isActive }) =>
+                `group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                  isActive
+                    ? 'bg-purple-950/80 border-l-4 border-purple-500 text-purple-200 font-semibold'
+                    : 'text-purple-300 hover:text-white hover:bg-purple-950/40 border-l-4 border-transparent'
+                }`
+              }
+            >
+              <div className="flex items-center gap-3">
+                <Shield className="w-4 h-4 text-purple-400" />
+                <span>Admin Panel</span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-900/60 text-purple-300 font-mono">
+                ROOT
+              </span>
+            </NavLink>
+          </div>
+        )}
       </div>
 
-      {/* Advisory Notice Box */}
-      {!collapsed && (
-        <div className="p-3 m-3 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs space-y-1.5">
-          <div className="flex items-center space-x-1.5 text-amber-400 font-medium text-[11px]">
-            <AlertTriangle className="h-3 w-3 shrink-0" />
-            <span>Schedule of Rates</span>
+      {/* Sidebar Bottom: User & Role Quick Card */}
+      <div className="p-3 border-t border-hydro-border/60 bg-hydro-surface/40">
+        <div className="p-2.5 rounded-xl bg-hydro-panel/80 border border-hydro-border flex items-center gap-2.5">
+          <img
+            src={
+              user?.avatar_url ||
+              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=faces'
+            }
+            alt="User"
+            className="w-8 h-8 rounded-full object-cover border border-white/20"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-white truncate leading-tight">
+              {user?.display_name || user?.full_name || 'Dr. Aarav Sharma'}
+            </p>
+            <p className="text-[10px] font-mono text-aqua-400 uppercase tracking-wide truncate">
+              {user?.role || 'viewer'}
+            </p>
           </div>
-          <p className="text-slate-400 leading-relaxed text-[10px]">
-            Calibrated with MGNREGA norms & live Open-Meteo telemetry.
-          </p>
         </div>
-      )}
+      </div>
     </aside>
   );
 };

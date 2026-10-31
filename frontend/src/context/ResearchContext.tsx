@@ -36,6 +36,11 @@ interface ResearchContextType {
   isAreaSelected: boolean;
   activeStep: number;
   setActiveStep: (step: number) => void;
+  activeTab: number;
+  setActiveTab: (tab: number) => void;
+  analysisResult?: any;
+  jobStatus?: 'idle' | 'running' | 'completed' | 'failed';
+  processingJobId?: string | null;
   fourPoints: FourPointMarker[];
   setFourPoints: React.Dispatch<React.SetStateAction<FourPointMarker[]>>;
   addFourPoint: (lat: number, lon: number) => void;
@@ -903,6 +908,11 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isAreaSelected: activeArea !== null,
         activeStep,
         setActiveStep,
+        activeTab: activeStep,
+        setActiveTab: setActiveStep,
+        analysisResult: activeArea,
+        jobStatus: isSimulating ? 'running' : 'idle',
+        processingJobId: null,
         fourPoints,
         setFourPoints,
         addFourPoint,

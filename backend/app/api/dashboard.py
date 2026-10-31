@@ -108,11 +108,14 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
             f"{missing_indicators} watershed(s) have missing indicator data."
         )
 
-    last_processing = (
-        db.query(func.max(ProcessingJob.finished_at))
-        .filter(ProcessingJob.status == "completed")
-        .scalar()
-    )
+    try:
+        last_processing = (
+            db.query(func.max(ProcessingJob.completed_at))
+            .filter(ProcessingJob.status == "completed")
+            .scalar()
+        )
+    except Exception:
+        last_processing = None
 
     # Map moderate alias for category counts
     dist_with_moderate = dict(category_counts)

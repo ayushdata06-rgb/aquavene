@@ -1,100 +1,126 @@
-"""Security utilities for Supabase JWT verification and claim parsing."""
+"""Authentication security utilities for Supabase HS256 JWT tokens."""
 
 from __future__ import annotations
 
 import base64
-import time
+import logging
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-from jose import JWTError, ExpiredSignatureError, jwt
+from jose import ExpiredSignatureError, JWTError, jwt
 
-from app.schemas.auth import AuthenticatedUser
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AuthenticatedUser:
+    """Strongly typed authenticated user representation."""
+    id: str
+    email: Optional[str]
+    role: str
+    display_name: str
+    avatar_url: Optional[str] = None
+    department: Optional[str] = None
+    provider: str = "google"
+    is_authenticated: bool = True
+    raw_claims: Dict[str, Any] = None
+
+    def __post_init__(self):
+        if self.raw_claims is None:
+            self.raw_claims = {}
+
+    @property
+    def full_name(self) -> str:
+        return self.display_name
 
 
 def decode_supabase_jwt(
     token: str,
     secret: str,
     algorithm: str = "HS256",
-    verify_exp: bool = True,
 ) -> Dict[str, Any]:
     """
-    Decode and verify a Supabase JWT token.
-    Supabase signs tokens with HMAC-SHA256 (HS256) using the project's JWT Secret.
+    Decodes and validates a Supabase HS256 JWT token.
+    1. First tries raw secret as string.
+    2. If JWTError occurs, tries base64.b64decode(secret) fallback
+       (standard Supabase secret format).
+    3. Never swallows JWTError silently — re-raises for deps to handle as 401.
     """
-    if not secret:
-        raise ValueError("JWT secret is not configured in settings.")
+    clean_token = token.strip()
+    clean_secret = secret.strip()
 
-    # Supabase tokens typically include `aud: "authenticated"`, but we allow flexibility
-    # while still strictly validating signature, expiry, and issued-at times.
-    options = {
-        "verify_signature": True,
-        "verify_exp": verify_exp,
-        "verify_iat": True,
-        "verify_aud": False,
-    }
-
+    # Attempt 1: Raw secret string
     try:
-        payload = jwt.decode(
-            token,
-            secret,
+        return jwt.decode(
+            clean_token,
+            clean_secret,
             algorithms=[algorithm],
-            options=options,
+            options={"verify_aud": False},
         )
-        return payload
-    except ExpiredSignatureError as exc:
-        raise ExpiredSignatureError("Token has expired.") from exc
-    except JWTError as exc:
-        # Fallback: Many Supabase project secrets are base64-encoded strings
+    except ExpiredSignatureError:
+        raise
+    except JWTError as initial_err:
+        logger.debug("Standard JWT decode failed (%s); trying base64 fallback", initial_err)
+        # Attempt 2: Base64-decoded secret string
         try:
-            b64_bytes = base64.b64decode(secret)
+            padded_secret = clean_secret + "=" * (-len(clean_secret) % 4)
+            decoded_secret_bytes = base64.b64decode(padded_secret)
             return jwt.decode(
-                token,
-                b64_bytes,
+                clean_token,
+                decoded_secret_bytes,
                 algorithms=[algorithm],
-                options=options,
+                options={"verify_aud": False},
             )
-        except Exception:
-            raise JWTError(f"Could not validate credentials: {str(exc)}") from exc
+        except ExpiredSignatureError:
+            raise
+        except Exception as fallback_err:
+            logger.warning("Both standard and base64 JWT decodes failed: %s", fallback_err)
+            raise JWTError(f"Token validation failed: {fallback_err}") from initial_err
 
 
 def parse_user_from_claims(claims: Dict[str, Any]) -> AuthenticatedUser:
-    """Extract and normalize user profile fields from Supabase JWT claims."""
-    user_id = str(claims.get("sub", ""))
+    """Extract sub, email, role, and metadata from validated JWT claims."""
+    user_id = str(claims.get("sub") or claims.get("id") or "")
+    if not user_id:
+        raise ValueError("JWT claims missing mandatory 'sub' subject field")
+
     email = claims.get("email")
-    
-    user_meta = claims.get("user_metadata") or {}
-    app_meta = claims.get("app_metadata") or {}
+    user_metadata = claims.get("user_metadata") or {}
+    app_metadata = claims.get("app_metadata") or {}
 
-    # Full name can be in user_metadata as 'full_name' or 'name' (Google OAuth)
-    full_name = (
-        user_meta.get("full_name")
-        or user_meta.get("name")
-        or (email.split("@")[0] if email else "User")
+    role = (
+        claims.get("role")
+        or app_metadata.get("role")
+        or user_metadata.get("role")
+        or "viewer"
+    ).lower()
+
+    if role == "authenticated":
+        role = "planner"
+
+    display_name = (
+        user_metadata.get("full_name")
+        or user_metadata.get("name")
+        or claims.get("name")
+        or (email.split("@")[0] if email else "AquaVane User")
     )
 
-    # Avatar URL from Google OAuth
-    avatar_url = user_meta.get("avatar_url") or user_meta.get("picture")
-
-    # Determine user role (app_metadata takes precedence, then user_metadata, then root role)
-    raw_role = (
-        app_meta.get("role")
-        or user_meta.get("role")
-        or claims.get("role", "viewer")
+    avatar_url = (
+        user_metadata.get("avatar_url")
+        or user_metadata.get("picture")
+        or claims.get("picture")
     )
-    # Normalize default 'authenticated' to 'viewer' if not specified
-    role = "viewer" if raw_role == "authenticated" else raw_role
 
-    # OAuth provider (Google, email, etc.)
-    provider = (
-        app_meta.get("provider")
-        or (app_meta.get("providers", ["google"])[0] if app_meta.get("providers") else "google")
-    )
+    department = user_metadata.get("department") or app_metadata.get("department")
+    provider = app_metadata.get("provider") or claims.get("iss", "supabase")
 
     return AuthenticatedUser(
         id=user_id,
         email=email,
-        full_name=full_name,
-        avatar_url=avatar_url,
         role=role,
+        display_name=display_name,
+        avatar_url=avatar_url,
+        department=department,
         provider=provider,
         is_authenticated=True,
         raw_claims=claims,
@@ -104,33 +130,28 @@ def parse_user_from_claims(claims: Dict[str, Any]) -> AuthenticatedUser:
 def create_test_token(
     user_id: str,
     email: str,
-    secret: str,
-    algorithm: str = "HS256",
-    expires_in_seconds: int = 3600,
-    role: str = "authenticated",
-    full_name: str = "Test Planner",
-    avatar_url: Optional[str] = "https://lh3.googleusercontent.com/test",
-    provider: str = "google",
+    secret: str = "test-secret-key-12345",
+    role: str = "planner",
+    full_name: str = "Test Officer",
+    avatar_url: Optional[str] = None,
+    expires_in_minutes: int = 60,
 ) -> str:
-    """Helper function to create a signed JWT simulating a Supabase Google OAuth token."""
-    now = int(time.time())
-    payload = {
+    """Generates a synthetic Supabase JWT token for pytest and local testing."""
+    now_ts = int(datetime.now(timezone.utc).timestamp())
+    exp_ts = now_ts + (expires_in_minutes * 60)
+
+    claims = {
         "sub": user_id,
+        "email": email,
         "aud": "authenticated",
         "role": role,
-        "email": email,
-        "iat": now,
-        "exp": now + expires_in_seconds,
+        "iat": now_ts,
+        "exp": exp_ts,
+        "app_metadata": {"provider": "google", "role": role},
         "user_metadata": {
             "full_name": full_name,
-            "name": full_name,
             "avatar_url": avatar_url,
-            "picture": avatar_url,
-            "email": email,
-        },
-        "app_metadata": {
-            "provider": provider,
-            "providers": [provider],
+            "role": role,
         },
     }
-    return jwt.encode(payload, secret, algorithm=algorithm)
+    return jwt.encode(claims, secret, algorithm="HS256")

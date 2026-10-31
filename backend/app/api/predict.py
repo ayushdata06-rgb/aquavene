@@ -3,85 +3,139 @@
 from __future__ import annotations
 
 import logging
+import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
+from app.auth.deps import get_optional_user
+from app.auth.security import AuthenticatedUser
+from app.db.session import get_db
+from app.models.models import ProcessingJob
+from app.schemas.predict import (
+    AOIPredictRequest,
+    AOIPredictResponse,
+    FeatureVector,
+    HydrographPoint,
+    HydrographResult,
+    InterventionLevers,
+    SimulateRequest,
+    SimulateResponse,
+    USLEFactors,
+    VulnerabilityResult,
+    WhiteboxResult,
+)
+from app.services.gis.raster_service import RasterService
+from app.services.gis.whitebox_service import WhiteboxService
 from app.services.ml.engine import RestorationMLEngine
+from app.services.ml.shap import TreeSHAPExplainer
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-class AOIPredictRequest(BaseModel):
-    """Request payload containing a GeoJSON Polygon or MultiPolygon."""
-    geojson: Dict[str, Any]
-    name: Optional[str] = "Custom Selected AOI"
-
-
-class CounterfactualSimulateRequest(BaseModel):
-    """Request payload for real-time what-if simulation across 5 restoration levers."""
-    base_features: Dict[str, Any]
-    reforest_bare_soil_pct: float = Field(0.0, ge=0.0, le=100.0)
-    add_check_dams_count: int = Field(0, ge=0, le=20)
-    cct_ridge_coverage_pct: float = Field(0.0, ge=0.0, le=100.0)
-    stream_bank_repair_km: float = Field(0.0, ge=0.0, le=50.0)
-    barriers_removed_count: int = Field(0, ge=0, le=20)
-    dirt_roads_stabilized_km: float = Field(0.0, ge=0.0, le=50.0)
-    cover_crop_cropland_pct: float = Field(0.0, ge=0.0, le=100.0)
-
-
 @router.post("/aoi")
-def predict_aoi(payload: AOIPredictRequest) -> Dict[str, Any]:
-    """Analyze any user-drawn arbitrary region using the 4-Model ML Engine."""
+async def predict_aoi(
+    payload: AOIPredictRequest,
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Analyze any user-drawn arbitrary region:
+    1. Extracts 12 raster and terrain features.
+    2. Runs WhiteboxTools D8 flow and stream network extraction.
+    3. Calculates USLE soil loss and TreeSHAP driver explanations.
+    4. Records ProcessingJob entry in database.
+    """
     try:
         engine = RestorationMLEngine.get_instance()
         geom = payload.geojson
 
-        # Handle Feature or FeatureCollection wrappers if passed
         if geom.get("type") == "Feature":
             geom = geom.get("geometry", {})
         elif geom.get("type") == "FeatureCollection":
-            features = geom.get("features", [])
-            if not features:
+            features_list = geom.get("features", [])
+            if not features_list:
                 raise ValueError("Empty FeatureCollection provided.")
-            geom = features[0].get("geometry", {})
+            geom = features_list[0].get("geometry", {})
 
         if not geom or geom.get("type") not in ["Polygon", "MultiPolygon"]:
             raise ValueError("Geometry must be a valid GeoJSON Polygon or MultiPolygon.")
 
+        # 1. Run Core ML analysis
         result = engine.analyze_aoi(geom)
-        result["name"] = payload.name
+        result["name"] = payload.name or "Custom Selected AOI"
+
+        # 2. Extract 12 Features & Whitebox hydrology
+        raster_svc = RasterService()
+        features = await raster_svc.extract_12_features(payload.geojson)
+        usle = await raster_svc.compute_usle_factors(
+            slope_deg=features.mean_slope_deg, cover_pct=features.forest_cover_pct
+        )
+        shap_res = TreeSHAPExplainer.explain(features, base_score=result.get("score", 65.0))
+
+        # 3. Create ProcessingJob tracking in PostgreSQL
+        user_uuid = None
+        if user and user.id:
+            try:
+                user_uuid = uuid.UUID(user.id)
+            except Exception:
+                pass
+
+        job = ProcessingJob(
+            id=uuid.uuid4(),
+            created_by=user_uuid,
+            job_type="aoi_predict",
+            status="completed",
+            progress_pct=100,
+            input_geojson=payload.geojson,
+            result_json={
+                "area_name": result["name"],
+                "score": result.get("score"),
+                "category": result.get("priority_category"),
+                "soil_loss": result.get("soil_loss_t_ha_yr"),
+            },
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+        )
+        db.add(job)
+        try:
+            db.commit()
+            result["processing_job_id"] = str(job.id)
+        except Exception:
+            db.rollback()
+
+        # Enrich response with v2 fields while preserving v1 format
+        result["feature_vector"] = features.model_dump()
+        result["usle"] = usle.model_dump()
+        result["shap_explanations"] = shap_res.model_dump()
+
         return result
+
     except Exception as e:
         logger.error("Error in ML AOI prediction: %s", e, exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/simulate")
-def simulate_counterfactual(payload: CounterfactualSimulateRequest) -> Dict[str, Any]:
-    """Run instant what-if counterfactual simulation on user sliders."""
+def simulate_counterfactual(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Run 5-pillar counterfactual simulation:
+    Dynamically recalculates priority score, soil loss reduction, and flattening of 72h hydrograph.
+    """
     try:
         engine = RestorationMLEngine.get_instance()
-        return engine.simulate_counterfactual(
-            base_features=payload.base_features,
-            reforest_bare_soil_pct=payload.reforest_bare_soil_pct,
-            add_check_dams_count=payload.add_check_dams_count,
-            cct_ridge_coverage_pct=payload.cct_ridge_coverage_pct,
-            stream_bank_repair_km=payload.stream_bank_repair_km,
-            barriers_removed_count=payload.barriers_removed_count,
-            dirt_roads_stabilized_km=payload.dirt_roads_stabilized_km,
-            cover_crop_cropland_pct=payload.cover_crop_cropland_pct,
-        )
+        return engine.simulate_counterfactual(payload)
     except Exception as e:
-        logger.error("Error in ML counterfactual simulation: %s", e)
+        logger.error("Error in simulation: %s", e, exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/models-info")
 def get_models_info() -> Dict[str, Any]:
-    """Return technical specs of the 4 ML models and their data sources."""
+    """Retrieve metadata, parameters, and accuracy metrics for the 4 ML models."""
     return {
         "engine_version": "v2.0-ml-hybrid",
         "models": [

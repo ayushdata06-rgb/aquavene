@@ -1,12 +1,13 @@
-"""Authentication status and current user endpoints."""
+"""Authentication status, profile sync, and RBAC user management router."""
 
 from __future__ import annotations
 
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user, require_roles
@@ -18,7 +19,9 @@ from app.schemas.auth import (
     AuthMeResponse,
     AuthStatusResponse,
     ProfileResponse,
+    ProfileUpdate,
     RoleUpdatePayload,
+    UserListResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,7 +33,7 @@ VALID_ROLES = {"admin", "planner", "officer", "viewer"}
 
 @router.get("/status", response_model=AuthStatusResponse)
 def get_auth_status():
-    """Retrieve auth system configuration status."""
+    """Retrieve auth system configuration and engine version."""
     settings = get_settings()
     is_supabase_configured = bool(settings.supabase_url and (settings.supabase_anon_key or settings.jwt_secret))
     return AuthStatusResponse(
@@ -38,6 +41,7 @@ def get_auth_status():
         provider="google",
         supabase_configured=is_supabase_configured,
         jwt_algorithm=settings.jwt_algorithm,
+        version="2.0.0",
     )
 
 
@@ -47,50 +51,59 @@ def get_me(
     db: Session = Depends(get_db),
 ):
     """
-    Retrieve current authenticated user details from Supabase JWT.
-    Synchronizes the authoritative role from the PostgreSQL 'profiles' table.
+    Retrieve current authenticated user details and synchronized PostgreSQL Profile.
+    Database Profile.role is authoritative over JWT claims.
     """
     settings = get_settings()
+    profile_resp: Optional[ProfileResponse] = None
+
     try:
         user_uuid = uuid.UUID(user.id)
         profile = db.query(Profile).filter(Profile.id == user_uuid).first()
-        if profile and isinstance(getattr(profile, "role", None), str):
-            user.role = profile.role
+        if profile:
+            if isinstance(getattr(profile, "role", None), str):
+                user.role = profile.role
+            profile.last_active = datetime.now(timezone.utc)
+            db.commit()
+            profile_resp = ProfileResponse.model_validate(profile)
     except Exception as exc:
-        logger.debug("Could not lookup DB profile for user %s: %s", user.id, exc)
+        logger.debug("Profile lookup skipped/failed: %s", exc)
 
     return AuthMeResponse(
         user=user,
+        profile=profile_resp,
         auth_enabled=settings.auth_enabled,
     )
 
 
-@router.post("/sync-profile", response_model=AuthenticatedUser)
+@router.post("/sync-profile", response_model=ProfileResponse)
 def sync_user_profile(
     user: AuthenticatedUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    Sync or upsert the authenticated user profile into the AquaVane 'profiles' table.
-    - If the user already has a profile in the DB, the DB role is preserved as authoritative.
-    - If this is the very first user in the database, promote to 'admin'.
-    - Subsequent new users receive role 'planner' (or their specific claim).
+    Sync or upsert the authenticated user into the PostgreSQL 'profiles' table.
+    The very first user in the database is automatically elevated to 'admin'.
+    Subsequent users default to 'planner' (or their verified claim).
     """
     try:
         user_uuid = uuid.UUID(user.id)
     except (ValueError, AttributeError):
         user_uuid = uuid.uuid4()
 
-    existing = db.query(Profile).filter(Profile.id == user_uuid).first()
-    if existing and hasattr(existing, "role"):
-        if hasattr(existing, "display_name") and user.full_name:
-            existing.display_name = user.full_name
-        # Database role is authoritative if string
-        if isinstance(getattr(existing, "role", None), str):
-            user.role = existing.role
-        existing.updated_at = datetime.now(timezone.utc)
+    profile = db.query(Profile).filter(Profile.id == user_uuid).first()
+
+    if profile:
+        if user.display_name:
+            profile.display_name = user.display_name
+        if user.avatar_url:
+            profile.avatar_url = user.avatar_url
+        if user.department:
+            profile.department = user.department
+        profile.last_active = datetime.now(timezone.utc)
+        profile.updated_at = datetime.now(timezone.utc)
+        user.role = profile.role
     else:
-        # Determine initial role: first user becomes admin!
         total_profiles = 0
         try:
             total_profiles = db.query(Profile).count()
@@ -104,81 +117,138 @@ def sync_user_profile(
         else:
             assigned_role = "planner"
 
-        new_profile = Profile(
+        profile = Profile(
             id=user_uuid,
-            display_name=user.full_name or (user.email.split("@")[0] if user.email else "Watershed Planner"),
+            display_name=user.display_name or (user.email.split("@")[0] if user.email else "Watershed User"),
             role=assigned_role,
+            avatar_url=user.avatar_url,
+            department=user.department,
+            last_active=datetime.now(timezone.utc),
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
-        db.add(new_profile)
+        db.add(profile)
         user.role = assigned_role
 
     try:
         db.commit()
+        db.refresh(profile)
     except Exception as exc:
-        logger.warning("Failed to commit profile upsert: %s", exc)
+        logger.warning("Profile commit error: %s", exc)
         db.rollback()
 
-    return user
+    return ProfileResponse.model_validate(profile)
 
 
-@router.get("/users", response_model=List[ProfileResponse])
-def list_profiles(
+@router.get("/users", response_model=UserListResponse)
+def list_users(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    role: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
     current_user: AuthenticatedUser = Depends(require_roles(["admin"])),
     db: Session = Depends(get_db),
 ):
-    """Admin-only: list all user profiles and their assigned roles."""
-    profiles = db.query(Profile).order_by(Profile.created_at.desc()).all()
-    results = []
-    for p in profiles:
-        r = getattr(p, "role", "viewer")
-        results.append(
-            ProfileResponse(
-                id=str(getattr(p, "id", uuid.uuid4())),
-                display_name=getattr(p, "display_name", None),
-                role=r if isinstance(r, str) else "viewer",
-                created_at=getattr(p, "created_at", None),
-                updated_at=getattr(p, "updated_at", None),
+    """
+    Admin-only: Paginated user management query with role and name filtering.
+    """
+    query = db.query(Profile)
+
+    if role and role.lower() in VALID_ROLES:
+        query = query.filter(Profile.role == role.lower())
+
+    if search:
+        search_filter = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Profile.display_name.ilike(search_filter),
+                Profile.department.ilike(search_filter),
             )
         )
-    return results
+
+    total = query.count()
+    profiles = query.order_by(Profile.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+
+    # Calculate role distribution
+    dist: Dict[str, int] = {}
+    for r in ["admin", "planner", "officer", "viewer"]:
+        try:
+            dist[r] = db.query(Profile).filter(Profile.role == r).count()
+        except Exception:
+            dist[r] = 0
+
+    return UserListResponse(
+        users=[ProfileResponse.model_validate(p) for p in profiles],
+        total=total,
+        page=page,
+        limit=limit,
+        roles_distribution=dist,
+    )
 
 
-@router.patch("/users/{target_user_id}/role", response_model=ProfileResponse)
+@router.patch("/users/{target_id}/role", response_model=ProfileResponse)
 def update_user_role(
-    target_user_id: uuid.UUID,
+    target_id: uuid.UUID,
     payload: RoleUpdatePayload,
     current_user: AuthenticatedUser = Depends(require_roles(["admin"])),
     db: Session = Depends(get_db),
 ):
     """
-    Admin-only: elevate or modify a user's RBAC role.
-    Allowed roles: 'admin', 'planner', 'officer', 'viewer'.
+    Admin-only: Reassign or elevate a user's role.
+    Prevents demoting the last active administrator.
     """
-    norm_role = payload.role.strip().lower()
-    if norm_role not in VALID_ROLES:
+    new_role = payload.role.strip().lower()
+    if new_role not in VALID_ROLES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid role '{payload.role}'. Must be one of: {sorted(list(VALID_ROLES))}",
         )
 
-    profile = db.query(Profile).filter(Profile.id == target_user_id).first()
+    profile = db.query(Profile).filter(Profile.id == target_id).first()
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Profile with ID {target_user_id} not found.",
+            detail=f"Profile with ID {target_id} not found",
         )
 
-    profile.role = norm_role
+    # Protect against lock-out: check if target is the last admin
+    if profile.role == "admin" and new_role != "admin":
+        admin_count = db.query(Profile).filter(Profile.role == "admin").count()
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Security protection: Cannot demote the last remaining administrator.",
+            )
+
+    profile.role = new_role
     profile.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(profile)
 
-    return ProfileResponse(
-        id=str(profile.id),
-        display_name=profile.display_name,
-        role=profile.role,
-        created_at=profile.created_at,
-        updated_at=profile.updated_at,
-    )
+    return ProfileResponse.model_validate(profile)
+
+
+@router.delete("/users/{target_id}")
+def delete_or_deactivate_user(
+    target_id: uuid.UUID,
+    current_user: AuthenticatedUser = Depends(require_roles(["admin"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Admin-only: Deactivate or soft-delete user by setting role to 'viewer'.
+    """
+    profile = db.query(Profile).filter(Profile.id == target_id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    if profile.role == "admin":
+        admin_count = db.query(Profile).filter(Profile.role == "admin").count()
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="Cannot delete the last administrator.")
+
+    profile.role = "viewer"
+    profile.display_name = f"[Deactivated] {profile.display_name}"
+    profile.updated_at = datetime.now(timezone.utc)
+    db.commit()
+
+    return {"status": "deactivated", "id": str(target_id), "role": "viewer"}
