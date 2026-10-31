@@ -10,11 +10,13 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useResearch } from '../context/ResearchContext';
 import { AuthModal } from './AuthModal';
 import { apiClient } from '../api/client';
+import { DataResolutionModal } from './DataResolutionModal';
 
 export const Navbar: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -24,6 +26,7 @@ export const Navbar: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<'quick' | 'custom' | 'google' | 'matrix'>('quick');
   const [syncStatus, setSyncStatus] = useState<'live' | 'degraded' | 'offline'>('live');
+  const [isResolutionModalOpen, setIsResolutionModalOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -105,6 +108,16 @@ export const Navbar: React.FC = () => {
 
         {/* Right: Sync indicator, Role Pill, User Profile */}
         <div className="flex items-center gap-3">
+          {/* Data Provenance & Uncertainty Pill */}
+          <button
+            onClick={() => setIsResolutionModalOpen(true)}
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-hydro-panel hover:bg-hydro-card border border-hydro-border hover:border-cyan-500/50 text-[11px] text-slate-300 hover:text-cyan-300 transition-all shadow-sm"
+            title="Inspect DEM grid resolution, sensor accuracy, and confidence intervals"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Data Provenance</span>
+          </button>
+
           {/* Backend Sync Indicator */}
           <div
             title={`Backend sync: ${syncStatus.toUpperCase()}`}
@@ -202,6 +215,11 @@ export const Navbar: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         defaultTab={modalTab}
+      />
+
+      <DataResolutionModal
+        isOpen={isResolutionModalOpen}
+        onClose={() => setIsResolutionModalOpen(false)}
       />
     </>
   );

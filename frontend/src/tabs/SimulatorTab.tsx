@@ -22,6 +22,7 @@ import {
   Layers,
   TrendingDown,
   Gauge,
+  Scale,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -36,6 +37,7 @@ import {
 import { useResearch } from '../context/ResearchContext';
 import { useAuth } from '../context/AuthContext';
 import { LockedTabBanner } from '../components/LockedTabBanner';
+import { PolicyScenarioTool } from '../components/PolicyScenarioTool';
 
 export const SimulatorTab: React.FC = () => {
   const navigate = useNavigate();
@@ -52,6 +54,7 @@ export const SimulatorTab: React.FC = () => {
     saveCurrentPlan,
   } = useResearch();
 
+  const [simulationMode, setSimulationMode] = useState<'physical' | 'policy'>('physical');
   const [planSaveNotice, setPlanSaveNotice] = useState<string | null>(null);
 
   if (!isAreaSelected || !activeArea) {
@@ -149,6 +152,43 @@ export const SimulatorTab: React.FC = () => {
         </div>
       )}
 
+      {/* Mode Selector: Physical Interventions vs Ecological Policy Weights */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg gap-2">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setSimulationMode('physical')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+              simulationMode === 'physical'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30 ring-1 ring-purple-400'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Sliders className="w-4 h-4" />
+            <span>1. Physical Interventions & Hydrograph</span>
+          </button>
+          <button
+            onClick={() => setSimulationMode('policy')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+              simulationMode === 'policy'
+                ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow-md shadow-cyan-600/30 ring-1 ring-cyan-400'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Scale className="w-4 h-4" />
+            <span>2. Ecological Policy Weight Scenarios</span>
+          </button>
+        </div>
+        <div className="text-right text-[11px] text-slate-400 font-mono pr-2">
+          {simulationMode === 'physical'
+            ? 'Dynamic SCS-CN Peak Discharge Attenuation'
+            : 'Priority Score Sensitivity to Policy Weights'}
+        </div>
+      </div>
+
+      {simulationMode === 'policy' ? (
+        <PolicyScenarioTool area={activeArea} />
+      ) : (
+        <>
       {/* Real-time KPI Outcome Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
@@ -385,6 +425,8 @@ export const SimulatorTab: React.FC = () => {
           </button>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

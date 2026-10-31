@@ -491,21 +491,21 @@ export interface ActiveArea {
   drainage_density: number;
   rank_text: string;
   main_problem: string;
-  bounds: [number, number, number, number] | null;
-  coordinates: [number, number][];
-  fourPoints: Array<{ id: number; name: string; lat: number; lon: number }>;
-  hydrograph: HydrographPoint[];
-  peak_discharge_m3s: number;
-  flood_alert_days: number;
-  most_risky_day: string;
-  prescribed_interventions: PrescribedIntervention[];
-  estimated_budget_lakhs_inr: number;
-  shap_drivers: SHAPDriver[];
+  bounds?: [number, number, number, number] | null;
+  coordinates?: [number, number][];
+  fourPoints?: Array<{ id: number; name: string; lat: number; lon: number }>;
+  hydrograph?: HydrographPoint[];
+  peak_discharge_m3s?: number;
+  flood_alert_days?: number;
+  most_risky_day?: string;
+  prescribed_interventions?: PrescribedIntervention[];
+  estimated_budget_lakhs_inr?: number;
+  shap_drivers?: SHAPDriver[];
   location?: LocationInfo;
   history?: WaterHistoryInfo;
   hydrology_network?: HydrologyLayerCollection;
   restoration_plan?: RestorationPlan;
-  isCustom: boolean;
+  isCustom?: boolean;
   [key: string]: any;
 }
 

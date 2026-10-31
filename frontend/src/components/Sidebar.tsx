@@ -12,6 +12,7 @@ import {
   Shield,
   Lock,
   CheckCircle2,
+  BarChart3,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
 import { useAuth } from '../context/AuthContext';
@@ -19,55 +20,62 @@ import { useAuth } from '../context/AuthContext';
 export const TABS = [
   {
     step: 0,
+    id: 'rankings',
+    name: 'Ranked Watersheds',
+    path: '/rankings',
+    icon: BarChart3,
+  },
+  {
+    step: 1,
     id: 'map',
-    name: 'AOI Selection',
+    name: 'Geospatial Map (AOI)',
     path: '/map',
     icon: MapPin,
   },
   {
-    step: 1,
+    step: 2,
     id: 'history',
     name: 'Water History',
     path: '/history',
     icon: History,
   },
   {
-    step: 2,
+    step: 3,
     id: 'terrain',
     name: 'Terrain Health',
     path: '/terrain',
     icon: Mountain,
   },
   {
-    step: 3,
+    step: 4,
     id: 'reforest',
     name: 'Reforestation',
     path: '/reforest',
     icon: Trees,
   },
   {
-    step: 4,
+    step: 5,
     id: 'streams',
     name: 'Streams & Wetlands',
     path: '/streams',
     icon: Waves,
   },
   {
-    step: 5,
+    step: 6,
     id: 'farms',
     name: 'Farms & Roads',
     path: '/farms',
     icon: Tractor,
   },
   {
-    step: 6,
+    step: 7,
     id: 'simulator',
-    name: 'Simulator',
+    name: 'Policy & Simulation',
     path: '/simulator',
     icon: Activity,
   },
   {
-    step: 7,
+    step: 8,
     id: 'budget',
     name: 'DPR & Budget',
     path: '/budget',
@@ -90,7 +98,7 @@ export const Sidebar: React.FC = () => {
 
         {TABS.map((tab) => {
           const Icon = tab.icon;
-          const isLocked = tab.step > 0 && !activeArea;
+          const isLocked = !['rankings', 'map'].includes(tab.id) && !activeArea;
 
           return (
             <NavLink

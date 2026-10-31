@@ -31,12 +31,14 @@ import {
   Legend,
 } from 'recharts';
 import { useResearch } from '../context/ResearchContext';
+import { SiteDiagnosticModal } from '../components/SiteDiagnosticModal';
 
 export const TerrainHealthTab: React.FC = () => {
   const navigate = useNavigate();
   const { activeArea } = useResearch();
 
   const [activeProfileMode, setActiveProfileMode] = useState<'elevation' | 'velocity'>('elevation');
+  const [showDiagnosticModal, setShowDiagnosticModal] = useState<boolean>(false);
 
   const f = activeArea ? {
     relief_m: activeArea.relief_m,
@@ -105,6 +107,14 @@ export const TerrainHealthTab: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowDiagnosticModal(true)}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all shadow-md flex items-center gap-2"
+              title="Inspect raw values, policy weights, and point contribution breakdown"
+            >
+              <Activity className="h-4 w-4 text-emerald-400" />
+              <span>Diagnostic Attribution Scorecard</span>
+            </button>
             <button
               onClick={() => navigate('/reforest')}
               className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2"
@@ -430,6 +440,13 @@ export const TerrainHealthTab: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Per-Site Diagnostic Attribution Scorecard Modal */}
+      <SiteDiagnosticModal
+        isOpen={showDiagnosticModal}
+        onClose={() => setShowDiagnosticModal(false)}
+        area={activeArea}
+      />
     </div>
   );
 };

@@ -15,11 +15,16 @@ import {
   Archive,
   RotateCcw,
   Sparkles,
+  Activity,
+  Scale,
+  ShieldCheck,
+  Mountain,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
-import { LockedTabBanner } from '../components/LockedTabBanner';
 import { api, FIXTURE_RANKINGS } from '../api/client';
-import { PriorityScore } from '../types';
+import { PriorityScore, ActiveArea } from '../types';
+import { SiteDiagnosticModal } from '../components/SiteDiagnosticModal';
+import { DataResolutionModal } from '../components/DataResolutionModal';
 
 export const RankingsTab: React.FC = () => {
   const navigate = useNavigate();
@@ -32,8 +37,13 @@ export const RankingsTab: React.FC = () => {
   const [sortBy, setSortBy] = useState<'score' | 'soil' | 'runoff' | 'bare'>('score');
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
+  // Modals
+  const [diagnosticArea, setDiagnosticArea] = useState<ActiveArea | null>(null);
+  const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
+  const [showDataResolutionModal, setShowDataResolutionModal] = useState(false);
+
   useEffect(() => {
-    setActiveStep(2);
+    setActiveStep(0);
     api.getRankings().then((data) => {
       if (data && data.length > 0) setRankings(data);
     });
@@ -50,6 +60,43 @@ export const RankingsTab: React.FC = () => {
     setSelectedState('all');
     setSelectedBasin('all');
     setSortBy('score');
+  };
+
+  const handleOpenDiagnostic = (ws: PriorityScore) => {
+    const diagnosticObj: ActiveArea = {
+      id: ws.id,
+      name: ws.watershed_name,
+      code: ws.watershed_code,
+      district: ws.district,
+      state: ws.state,
+      area_sq_km: 42.5,
+      areaKm2: 42.5,
+      score: ws.overall_score,
+      category: ws.priority_category as any,
+      rank_text: `#${ws.rank_position} of ${rankings.length}`,
+      soil_loss_t_ha_yr: Math.round((ws.overall_score / 100) ** 1.8 * 45 * 10) / 10,
+      slope_deg: 16.5,
+      bare_soil_pct: Math.min(55, Math.round(ws.overall_score * 0.45)),
+      plant_cover_pct: Math.max(12, Math.round(100 - ws.overall_score * 0.7)),
+      rainfall_30d_mm: 280,
+      rainfall_anomaly_pct: 12,
+      monsoon_storm_p95: 58,
+      drainage_density: 2.1,
+      relief_m: 640,
+      main_problem: ws.overall_score >= 70 ? 'Steep slopes & bare soil erosion' : 'Monsoon runoff pressure',
+      coordinates: [[15.15, 74.35], [15.25, 74.35], [15.25, 74.45], [15.15, 74.45]],
+      hydrology_network: activeArea?.hydrology_network || ({} as any),
+      prescribed_interventions: activeArea?.prescribed_interventions || [],
+      historical_timeline: activeArea?.historical_timeline || [],
+      wiki_articles: activeArea?.wiki_articles || [],
+      hydrograph: activeArea?.hydrograph || [],
+      community_priorities: activeArea?.community_priorities || [],
+      budget_items: activeArea?.budget_items || [],
+      total_budget_lakhs_inr: 85.0,
+      mgnrega_mandays: 12000,
+    };
+    setDiagnosticArea(diagnosticObj);
+    setShowDiagnosticModal(true);
   };
 
   const filteredAndSortedRankings = useMemo(() => {
@@ -151,60 +198,52 @@ export const RankingsTab: React.FC = () => {
     setTimeout(() => setExportNotice(null), 3500);
   };
 
-  if (!isAreaSelected) {
-    return (
-      <LockedTabBanner
-        stepNumber={2}
-        stepName="See Priority & Compare Rankings"
-        whatItShows="This step ranks all catchments from most urgent to lowest, showing where your selected area stands and why it qualifies for restoration funding"
-      />
-    );
-  }
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
       {/* Step Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
           <div className="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-            <span>Step 2 of 4</span>
+            <span className="text-emerald-400">Micro-Watershed Prioritisation Engine</span>
             <span>•</span>
-            <span className="text-emerald-400">Restoration Urgency Rankings</span>
+            <span>Priority Vulnerability Index (PVI)</span>
           </div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight mt-0.5">
-            How Urgent Is This Area?
+            Ranked Micro-Watersheds & Spatial Prioritisation
           </h1>
           <p className="text-xs text-slate-400">
-            Compare your selected study area against all regional catchments to justify project funding
+            Multi-criteria hydrological screening based on USLE soil loss, topographic runoff, and remote sensing land degradation
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowDataResolutionModal(true)}
+            className="px-3 py-2 rounded-xl bg-slate-900 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 shadow-md transition-all"
+            title="Inspect satellite sensor resolutions, DEM grid size, and confidence intervals"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Data Provenance & Uncertainty</span>
+          </button>
+
           <button
             onClick={() => navigate('/map')}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium flex items-center gap-1.5 transition-colors"
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-medium flex items-center gap-1.5 transition-colors"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Map
-          </button>
-          <button
-            onClick={() => navigate('/hydrology')}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all"
-          >
-            <span>Understand the water flow</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Interactive Map</span>
           </button>
         </div>
       </div>
 
       {/* Top Summary Card for Active Area */}
-      {activeArea && (
+      {activeArea ? (
         <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/40 border border-emerald-500/30 shadow-xl space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                Active Study Area Summary
+                Selected Catchment Summary
               </span>
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 {activeArea.name}
@@ -217,18 +256,37 @@ export const RankingsTab: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-4 shrink-0">
-              <div className="text-right">
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <div className="text-right pr-2">
                 <span className="text-xs text-slate-400 block">Regional Rank</span>
                 <strong className="text-xl font-extrabold text-white">{activeArea.rank_text}</strong>
               </div>
-              <div className="h-10 w-px bg-slate-800" />
-              <div className="text-right">
+              <div className="h-10 w-px bg-slate-800 hidden sm:block" />
+              <div className="text-right pr-2">
                 <span className="text-xs text-slate-400 block">Urgency Score</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-2xl font-black text-white">{activeArea.score}</span>
                   {getPriorityBadge(activeArea.category)}
                 </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={() => {
+                    setDiagnosticArea(activeArea);
+                    setShowDiagnosticModal(true);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all"
+                >
+                  <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Inspect Score Breakdown</span>
+                </button>
+                <button
+                  onClick={() => navigate('/simulator')}
+                  className="px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-xs font-bold flex items-center gap-1.5 transition-all"
+                >
+                  <Scale className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Test Policy Scenarios</span>
+                </button>
               </div>
             </div>
           </div>
@@ -251,6 +309,20 @@ export const RankingsTab: React.FC = () => {
               <strong className="text-slate-200 text-xs truncate block">{activeArea.main_problem}</strong>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs text-slate-300">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <span>Select any micro-watershed below to inspect its diagnostic scorecard or view it on the interactive map.</span>
+          </div>
+          <button
+            onClick={() => navigate('/map')}
+            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all"
+          >
+            <span>Open Map</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -376,16 +448,31 @@ export const RankingsTab: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4 text-slate-300 text-[11px]">{mainProblem}</td>
                     <td className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          selectWatershed(ws);
-                          navigate('/map');
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-emerald-400 font-semibold border border-slate-700 hover:border-slate-600 transition-colors"
-                      >
-                        Show on Map
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDiagnostic(ws);
+                          }}
+                          className="px-2 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-[11px] text-emerald-300 font-semibold transition-colors flex items-center gap-1"
+                          title="View USLE soil loss, slope, and mathematical point contributions"
+                        >
+                          <Activity className="w-3 h-3 text-emerald-400" />
+                          <span>Diagnostic</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            selectWatershed(ws);
+                            navigate('/map');
+                          }}
+                          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 hover:text-white font-semibold border border-slate-700 hover:border-slate-600 transition-colors flex items-center gap-1"
+                          title="Locate and explore on interactive geospatial map"
+                        >
+                          <MapPin className="w-3 h-3 text-sky-400" />
+                          <span>Map</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -465,6 +552,18 @@ export const RankingsTab: React.FC = () => {
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
+      {/* Per-Site Diagnostic Modal */}
+      <SiteDiagnosticModal
+        isOpen={showDiagnosticModal}
+        onClose={() => setShowDiagnosticModal(false)}
+        area={diagnosticArea}
+      />
+
+      {/* Data Resolution & Uncertainty Modal */}
+      <DataResolutionModal
+        isOpen={showDataResolutionModal}
+        onClose={() => setShowDataResolutionModal(false)}
+      />
     </div>
   );
 };

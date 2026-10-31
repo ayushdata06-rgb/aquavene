@@ -30,6 +30,9 @@ import {
   Gauge,
   ChevronDown,
   ChevronUp,
+  Scale,
+  BarChart3,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -43,6 +46,8 @@ import {
 } from 'recharts';
 import { useResearch, FourPointMarker } from '../context/ResearchContext';
 import { FIXTURE_WATERSHEDS } from '../api/client';
+import { SiteDiagnosticModal } from '../components/SiteDiagnosticModal';
+import { DataResolutionModal } from '../components/DataResolutionModal';
 
 export const MapTab: React.FC = () => {
   const navigate = useNavigate();
@@ -51,6 +56,7 @@ export const MapTab: React.FC = () => {
     fourPoints,
     addFourPoint,
     updateFourPoint,
+    removePoint,
     removeLastFourPoint,
     clearFourPoints,
     analyzeFourPointsAOI,
@@ -82,6 +88,9 @@ export const MapTab: React.FC = () => {
   // UI Interactive Drawers & Modals
   const [showElevationProfile, setShowElevationProfile] = useState<boolean>(false);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState<boolean>(false);
+  const [showDiagnosticModal, setShowDiagnosticModal] = useState<boolean>(false);
+  const [showResolutionModal, setShowResolutionModal] = useState<boolean>(false);
+  const [showRankingsDrawer, setShowRankingsDrawer] = useState<boolean>(false);
   const [selectedFeature, setSelectedFeature] = useState<{
     category: 'stream' | 'barrier' | 'road' | 'vegetation' | 'station';
     title: string;
@@ -211,14 +220,15 @@ export const MapTab: React.FC = () => {
     fourPoints.forEach((pt) => {
       latlngs.push([pt.lat, pt.lon]);
 
+      // Exactly aligned 32x32 Leaflet divIcon (centered at anchor [16, 16])
       const customIcon = L.divIcon({
         className: 'custom-corner-pin',
         html: `
-          <div class="relative flex items-center justify-center -translate-x-1/2 -translate-y-1/2 cursor-grab">
-            <div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-white shadow-2xl flex items-center justify-center text-white font-extrabold text-xs">
+          <div class="relative w-8 h-8 flex items-center justify-center cursor-move select-none group">
+            <div class="w-8 h-8 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-90 border-2 border-white shadow-2xl flex items-center justify-center text-white font-extrabold text-xs transition-transform">
               ${pt.id}
             </div>
-            <div class="absolute -bottom-6 bg-slate-900/95 text-[10px] text-white px-2 py-0.5 rounded-md border border-slate-700 whitespace-nowrap shadow-xl">
+            <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-slate-900/95 text-[10px] text-slate-200 px-2 py-0.5 rounded-md border border-slate-700 whitespace-nowrap shadow-xl pointer-events-none">
               ${pt.name}
             </div>
           </div>
@@ -232,14 +242,58 @@ export const MapTab: React.FC = () => {
         draggable: true,
       });
 
+      // Live smooth polygon boundary re-shaping while dragging
+      marker.on('drag', (e) => {
+        const newPos = e.target.getLatLng();
+        if (polygonLayerRef.current) {
+          const polyCoords = polygonLayerRef.current.getLatLngs() as any;
+          const flatCoords = Array.isArray(polyCoords[0]) ? polyCoords[0] : polyCoords;
+          const idx = fourPoints.findIndex((p) => p.id === pt.id);
+          if (idx !== -1 && flatCoords[idx]) {
+            flatCoords[idx] = newPos;
+            polygonLayerRef.current.setLatLngs(flatCoords);
+          }
+        }
+      });
+
       marker.on('dragend', (e) => {
         const newPos = e.target.getLatLng();
         updateFourPoint(pt.id, newPos.lat, newPos.lng);
       });
 
-      marker.bindTooltip(`Corner ${pt.id}: ${pt.name}<br>Lat: ${pt.lat}, Lon: ${pt.lon}<br>Drag to adjust corner`, {
+      // Right-click / contextmenu delete corner
+      marker.on('contextmenu', (e) => {
+        L.DomEvent.stopPropagation(e);
+        removePoint(pt.id);
+      });
+
+      // Popup with coordinates & explicit Remove button
+      const popupDiv = document.createElement('div');
+      popupDiv.className = 'p-2 text-slate-200 text-xs font-sans';
+      popupDiv.innerHTML = `
+        <div class="font-bold text-emerald-400 mb-1">Corner ${pt.id}: ${pt.name}</div>
+        <div class="text-[11px] text-slate-400 font-mono mb-2">
+          ${pt.lat.toFixed(4)}°N, ${pt.lon.toFixed(4)}°E
+        </div>
+        <button id="del-corner-btn-${pt.id}" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-[10px] font-bold transition-colors cursor-pointer">
+          ✕ Remove Corner
+        </button>
+      `;
+      marker.bindPopup(popupDiv);
+      marker.on('popupopen', () => {
+        const btn = document.getElementById(`del-corner-btn-${pt.id}`);
+        if (btn) {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            marker.closePopup();
+            removePoint(pt.id);
+          };
+        }
+      });
+
+      marker.bindTooltip(`Corner ${pt.id} (${pt.name})<br>Drag to move • Click or right-click to delete`, {
         direction: 'top',
-        offset: [0, -16],
+        offset: [0, -18],
       });
 
       markersGroupRef.current?.addLayer(marker);
@@ -654,6 +708,29 @@ export const MapTab: React.FC = () => {
             <HelpCircle className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">How It Works</span>
           </button>
+
+          {/* Ranked Watersheds Slide-Over Trigger */}
+          <button
+            onClick={() => setShowRankingsDrawer(!showRankingsDrawer)}
+            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xl transition-all ${
+              showRankingsDrawer
+                ? 'bg-emerald-600 text-white shadow-emerald-600/30 ring-1 ring-emerald-400'
+                : 'bg-slate-900/95 border border-slate-700 hover:bg-slate-800 text-emerald-400'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Ranked Catchments</span>
+          </button>
+
+          {/* Data Provenance & Uncertainty Modal Trigger */}
+          <button
+            onClick={() => setShowResolutionModal(true)}
+            className="px-3 py-2 rounded-xl bg-slate-900/95 border border-slate-700 hover:bg-slate-800 text-cyan-400 text-xs font-semibold flex items-center gap-1.5 shadow-xl transition-all"
+            title="View SRTM 30m DEM error margin, Open-Meteo variance, and 95% confidence intervals"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden md:inline">Data Uncertainty</span>
+          </button>
         </div>
 
         {/* Right: Check Area & Step 2 Forward Button */}
@@ -998,6 +1075,24 @@ export const MapTab: React.FC = () => {
             </div>
           </div>
 
+          <div className="space-y-1.5 pt-1">
+            <button
+              onClick={() => setShowDiagnosticModal(true)}
+              className="w-full py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
+            >
+              <Activity className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Why this Score? (Site Diagnostic)</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/simulator')}
+              className="w-full py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
+            >
+              <Scale className="w-3.5 h-3.5 text-purple-400" />
+              <span>Test Alternate Policy Weights</span>
+            </button>
+          </div>
+
           <button
             onClick={() => navigate('/history')}
             className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/30 transition-all"
@@ -1144,6 +1239,96 @@ export const MapTab: React.FC = () => {
 
       {/* Native Leaflet Map Canvas */}
       <div ref={mapContainerRef} className="w-full h-full z-0 cursor-crosshair" />
+
+      {/* Slide-Over Ranked Catchments Panel */}
+      {showRankingsDrawer && (
+        <div className="absolute top-16 right-3 bottom-10 z-[450] w-80 sm:w-96 bg-slate-900/98 backdrop-blur-xl border border-emerald-500/40 rounded-2xl p-4 shadow-2xl pointer-events-auto flex flex-col space-y-3 animate-in slide-in-from-right-6 duration-200">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+                <BarChart3 className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Ranked Catchments</h3>
+                <p className="text-[10px] text-slate-400">PVI Composite Hydrological Priority</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowRankingsDrawer(false)}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="overflow-y-auto flex-1 space-y-2 pr-1 custom-scrollbar text-xs">
+            {FIXTURE_WATERSHEDS.map((ws, idx) => {
+              const isSelected = activeArea?.code === ws.watershed_code || activeArea?.name === ws.name;
+              return (
+                <div
+                  key={ws.id || ws.watershed_code}
+                  onClick={() => {
+                    selectWatershed(ws);
+                    if (ws.centroid && mapInstanceRef.current) {
+                      mapInstanceRef.current.flyTo(ws.centroid, 11, { duration: 1.5 });
+                    }
+                  }}
+                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-500/15 border-emerald-500/60 shadow-md ring-1 ring-emerald-400'
+                      : 'bg-slate-950/70 border-slate-800 hover:bg-slate-800/80 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white flex items-center gap-1.5">
+                      <span className="text-emerald-400 font-mono text-[11px]">#{idx + 1}</span>
+                      <span>{ws.name}</span>
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        (ws.priority_score || 70) >= 75
+                          ? 'bg-rose-500/20 text-rose-300'
+                          : (ws.priority_score || 70) >= 60
+                          ? 'bg-amber-500/20 text-amber-300'
+                          : 'bg-emerald-500/20 text-emerald-300'
+                      }`}
+                    >
+                      PVI: {ws.priority_score || 72}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
+                    <span>{ws.district}, {ws.state}</span>
+                    <span className="font-mono text-cyan-400">{ws.watershed_code}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="pt-2 border-t border-slate-800">
+            <button
+              onClick={() => navigate('/rankings')}
+              className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+            >
+              <span>Open Full Rankings Matrix</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Site Diagnostic Breakdown Modal */}
+      <SiteDiagnosticModal
+        isOpen={showDiagnosticModal}
+        onClose={() => setShowDiagnosticModal(false)}
+        area={activeArea}
+      />
+
+      {/* Transparent Data Resolution Notes & Uncertainty Modal */}
+      <DataResolutionModal
+        isOpen={showResolutionModal}
+        onClose={() => setShowResolutionModal(false)}
+      />
 
       {/* Bottom Status Bar */}
       <div className="absolute bottom-0 left-0 right-0 z-[400] bg-slate-950/90 backdrop-blur-md border-t border-slate-800 px-4 py-1.5 text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2 pointer-events-auto">

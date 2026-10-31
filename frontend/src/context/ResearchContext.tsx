@@ -47,6 +47,7 @@ interface ResearchContextType {
   setFourPoints: React.Dispatch<React.SetStateAction<FourPointMarker[]>>;
   addFourPoint: (lat: number, lon: number) => void;
   updateFourPoint: (id: number, lat: number, lon: number) => void;
+  removePoint: (id: number) => void;
   removeLastFourPoint: () => void;
   clearFourPoints: () => void;
   analyzeFourPointsAOI: (pts?: FourPointMarker[], customName?: string) => Promise<ActiveArea>;
@@ -210,16 +211,20 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [sliderValues, activeArea?.id, activeArea?.score]);
 
   const addFourPoint = (lat: number, lon: number) => {
-    if (fourPoints.length >= 4) return;
+    let current = fourPoints;
+    if (current.length >= 4) {
+      // If 4 corners already placed, clicking starts a clean new boundary
+      current = [];
+    }
     const labels = ['P1 (NW)', 'P2 (NE)', 'P3 (SE)', 'P4 (SW)'];
-    const nextIdx = fourPoints.length;
+    const nextIdx = current.length;
     const newPt: FourPointMarker = {
       id: nextIdx + 1,
       name: labels[nextIdx],
       lat: Math.round(lat * 10000) / 10000,
       lon: Math.round(lon * 10000) / 10000,
     };
-    const updated = [...fourPoints, newPt];
+    const updated = [...current, newPt];
     setFourPoints(updated);
 
     if (updated.length === 4) {
@@ -236,6 +241,17 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (updated.length === 4) {
       analyzeFourPointsAOI(updated);
     }
+  };
+
+  const removePoint = (id: number) => {
+    const updated = fourPoints
+      .filter((p) => p.id !== id)
+      .map((p, idx) => ({
+        ...p,
+        id: idx + 1,
+        name: ['P1 (NW)', 'P2 (NE)', 'P3 (SE)', 'P4 (SW)'][idx] || `P${idx + 1}`,
+      }));
+    setFourPoints(updated);
   };
 
   const removeLastFourPoint = () => {
@@ -597,6 +613,7 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setFourPoints,
         addFourPoint,
         updateFourPoint,
+        removePoint,
         removeLastFourPoint,
         clearFourPoints,
         analyzeFourPointsAOI,
