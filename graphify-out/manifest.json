@@ -823,8 +823,8 @@
   },
   "backend/scripts/supabase_rbac_rls.sql": {
     "mtime": 1793397630.5806584,
-    "seen": 1793429957.6827967,
-    "ast_hash": "",
+    "seen": 1793432647.0720623,
+    "ast_hash": "d1d635544be0125297af04df8eec602e",
     "semantic_hash": ""
   },
   "frontend/src/components/ErrorBoundary.tsx": {
