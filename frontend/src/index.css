@@ -41,6 +41,10 @@
 .leaflet-container {
   background-color: #08111e !important;
   font-family: inherit;
+  width: 100% !important;
+  height: 100% !important;
+  position: relative;
+  z-index: 0;
 }
 
 .leaflet-control-zoom a {

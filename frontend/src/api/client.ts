@@ -22,9 +22,20 @@ import {
   WatershedIndicator,
 } from '../types';
 
-const rawApiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').trim();
-const cleanUrl = rawApiUrl.replace(/\/+$/, '');
-const API_BASE = cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+const getApiBase = (): string => {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  if (envUrl) {
+    const clean = envUrl.replace(/\/+$/, '');
+    return clean.endsWith('/api') ? clean : `${clean}/api`;
+  }
+  // When deployed to production (e.g. Vercel), route automatically to Render backend over HTTPS
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return 'https://aquavene.onrender.com/api';
+  }
+  return 'http://localhost:8000/api';
+};
+
+const API_BASE = getApiBase();
 
 let currentAuthToken: string | null = null;
 

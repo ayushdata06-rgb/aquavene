@@ -134,8 +134,9 @@ export const MapTab: React.FC = () => {
 
     // Initial tile layer: 100% Free OpenStreetMap (Standard Leaflet, zero API key)
     baseTileLayerRef.current = L.tileLayer(
-      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       {
+        subdomains: ['a', 'b', 'c'],
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors',
       }
@@ -158,7 +159,21 @@ export const MapTab: React.FC = () => {
       addFourPoint(e.latlng.lat, e.latlng.lng);
     });
 
+    // Invalidate size on container layout changes to avoid grey/blank canvas
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
+    const t1 = setTimeout(() => map.invalidateSize(), 150);
+    const t2 = setTimeout(() => map.invalidateSize(), 500);
+
     return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -169,7 +184,7 @@ export const MapTab: React.FC = () => {
     if (!mapInstanceRef.current || !baseTileLayerRef.current) return;
 
     const tileConfigs = {
-      osm: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       terrain: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
       dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
       light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',

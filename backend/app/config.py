@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     auth_rate_limit: str = "300/minute"
 
     # CORS
-    allowed_origins: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
+    allowed_origins: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,https://aquavene.vercel.app"
 
     @property
     def allowed_origins_list(self) -> List[str]:

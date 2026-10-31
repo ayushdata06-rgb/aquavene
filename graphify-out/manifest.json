@@ -12,8 +12,8 @@
     "semantic_hash": ""
   },
   "backend/app/api/auth.py": {
-    "mtime": 1793409491.8927143,
-    "seen": 1793409537.4189055,
+    "mtime": 1793413784.3869774,
+    "seen": 1793420290.4686055,
     "ast_hash": "8a7879e817818e14319e24f1c288b45b",
     "semantic_hash": ""
   },
@@ -78,21 +78,21 @@
     "semantic_hash": ""
   },
   "backend/app/auth/deps.py": {
-    "mtime": 1793409469.9740348,
-    "seen": 1793409537.4196303,
+    "mtime": 1793413784.5295606,
+    "seen": 1793420290.4696052,
     "ast_hash": "a91176ef431a5dbae1f6de606ab7aa90",
     "semantic_hash": ""
   },
   "backend/app/auth/security.py": {
-    "mtime": 1793409447.9239595,
-    "seen": 1793409537.4196322,
+    "mtime": 1793413784.6111202,
+    "seen": 1793420290.469607,
     "ast_hash": "85f2ed89461e438edb59ff61c7242a1c",
     "semantic_hash": ""
   },
   "backend/app/config.py": {
-    "mtime": 1793409389.221041,
-    "seen": 1793409537.4196334,
-    "ast_hash": "9f4bc37c36ffcadf3c4310c9cfbb37cd",
+    "mtime": 1793420214.720185,
+    "seen": 1793420290.469609,
+    "ast_hash": "f6356b0fe561b858774f92873225d4ab",
     "semantic_hash": ""
   },
   "backend/app/db/__init__.py": {
@@ -306,8 +306,8 @@
     "semantic_hash": ""
   },
   "backend/tests/test_api.py": {
-    "mtime": 1793409479.956687,
-    "seen": 1793409537.4246664,
+    "mtime": 1793413784.8667347,
+    "seen": 1793420290.4777887,
     "ast_hash": "cde15e84fd58a0f187c1348bcd171e9d",
     "semantic_hash": ""
   },
@@ -366,9 +366,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/client.ts": {
-    "mtime": 1793406927.419692,
-    "seen": 1793407246.6153636,
-    "ast_hash": "3ac9ed80a5be02ba3e10ab086d393360",
+    "mtime": 1793420161.944233,
+    "seen": 1793420290.4799476,
+    "ast_hash": "36b31370cdee94032aa19de6d74e2fec",
     "semantic_hash": ""
   },
   "frontend/src/components/ActiveAreaBar.tsx": {
@@ -426,15 +426,15 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/supabase.ts": {
-    "mtime": 1793123475.6572204,
-    "seen": 1793387920.8444152,
-    "ast_hash": "8a7034e46a900c1f7a08a64760b957fb",
+    "mtime": 1793420173.2946093,
+    "seen": 1793420290.4827557,
+    "ast_hash": "fb83a7f6884c3e49444aec6943cee9a5",
     "semantic_hash": ""
   },
   "frontend/src/main.tsx": {
-    "mtime": 1793123475.6572204,
-    "seen": 1793387920.8444183,
-    "ast_hash": "f591cca7d8250bad287f0b750d4f78ad",
+    "mtime": 1793420124.429737,
+    "seen": 1793420290.4827592,
+    "ast_hash": "a259521cd281e8caf5249c53b209771e",
     "semantic_hash": ""
   },
   "frontend/src/tabs/HydrologyTab.tsx": {
@@ -444,9 +444,9 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/MapTab.tsx": {
-    "mtime": 1793395173.7616868,
-    "seen": 1793395615.9899788,
-    "ast_hash": "5edb33c9b3c6276c6a3251dad6bfebd6",
+    "mtime": 1793420198.6004024,
+    "seen": 1793420290.4831946,
+    "ast_hash": "7245b1061dbeffe643eb9cf271b192d8",
     "semantic_hash": ""
   },
   "frontend/src/tabs/RankingsTab.tsx": {
@@ -546,9 +546,9 @@
     "semantic_hash": ""
   },
   "frontend/index.html": {
-    "mtime": 1793123475.650987,
-    "seen": 1793387920.8444762,
-    "ast_hash": "28bf70125e3050e9805d58f661994291",
+    "mtime": 1793420131.2834694,
+    "seen": 1793420290.4856362,
+    "ast_hash": "449cd41d53abbcc8965c07f4f360f413",
     "semantic_hash": ""
   },
   "frontend/public/favicon.svg": {
@@ -783,6 +783,12 @@
     "mtime": 1793407476.0954213,
     "seen": 1793409537.4203277,
     "ast_hash": "4503e38f8ebe9fffb3a97d7bc0d0d5a9",
+    "semantic_hash": ""
+  },
+  "vercel.json": {
+    "mtime": 1793420204.7004447,
+    "seen": 1793420290.4848065,
+    "ast_hash": "2e07aac46c65d8a2fd25a964c577b5e5",
     "semantic_hash": ""
   },
   "frontend/package-lock.json": {
