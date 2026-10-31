@@ -133,3 +133,35 @@ def test_saved_plans_workflow(client: TestClient):
     # 6. Admin can delete plan (200 OK or 404 if mock session)
     del_admin = client.delete(f"/api/plans/{plan_id}", headers={"Authorization": f"Bearer {admin_token}"})
     assert del_admin.status_code in [200, 404]
+
+
+def test_generate_dpr_plan_endpoints(client: TestClient):
+    """Test dynamic generation of real 5-pillar DPR plan, Schedule of Rates, and BoQ."""
+    # 1. GET generator without arguments defaults to benchmark Upper Kali
+    res_get = client.get("/api/plans/generate")
+    assert res_get.status_code == 200
+    data_get = res_get.json()
+    assert "summary" in data_get
+    assert "bill_of_quantities" in data_get
+    assert "implementation_roadmap" in data_get
+    assert data_get["summary"]["total_budget_lakhs_inr"] > 0
+    assert data_get["summary"]["total_mgnrega_mandays"] > 0
+    assert len(data_get["bill_of_quantities"]) == 10
+
+    # 2. POST generator with custom catchment area and slider levers
+    payload = {
+        "area_sq_km": 50.0,
+        "mean_slope_deg": 20.0,
+        "bare_soil_pct": 30.0,
+        "reforest_pct": 40.0,
+        "check_dams": 20,
+        "cct_pct": 35.0,
+    }
+    res_post = client.post("/api/plans/generate", json=payload)
+    assert res_post.status_code == 200
+    data_post = res_post.json()
+    assert data_post["summary"]["total_budget_lakhs_inr"] > 0
+    assert data_post["summary"]["total_mgnrega_mandays"] > 0
+    assert data_post["summary"]["projected_runoff_reduction_pct"] > 0
+    assert data_post["summary"]["projected_soil_loss_reduction_pct"] > 0
+

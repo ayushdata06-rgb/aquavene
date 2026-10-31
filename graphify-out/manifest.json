@@ -42,9 +42,9 @@
     "semantic_hash": ""
   },
   "backend/app/api/plans.py": {
-    "mtime": 1793409135.8581924,
-    "seen": 1793409537.4192936,
-    "ast_hash": "4a9b36612bdd3dcfdae475fd7a194452",
+    "mtime": 1793432266.0220954,
+    "seen": 1793432621.6092248,
+    "ast_hash": "d3605c47406197a6f0beb3721ec49c0b",
     "semantic_hash": ""
   },
   "backend/app/api/predict.py": {
@@ -306,9 +306,9 @@
     "semantic_hash": ""
   },
   "backend/tests/test_api.py": {
-    "mtime": 1793413784.8667347,
-    "seen": 1793420290.4777887,
-    "ast_hash": "cde15e84fd58a0f187c1348bcd171e9d",
+    "mtime": 1793432572.2345254,
+    "seen": 1793432621.6293776,
+    "ast_hash": "bdc54b91c3a54b487cea4f888620e792",
     "semantic_hash": ""
   },
   "backend/tests/test_auth.py": {
@@ -366,9 +366,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/client.ts": {
-    "mtime": 1793429800.0198903,
-    "seen": 1793429928.0949893,
-    "ast_hash": "b5d339948546246407a0273e14246b3d",
+    "mtime": 1793432430.2756445,
+    "seen": 1793432621.6325529,
+    "ast_hash": "c6ac93226bfd6aeb85b79305f212f825",
     "semantic_hash": ""
   },
   "frontend/src/components/ActiveAreaBar.tsx": {
@@ -396,8 +396,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/Navbar.tsx": {
-    "mtime": 1793429641.4160056,
-    "seen": 1793429928.09615,
+    "mtime": 1793429998.8833427,
+    "seen": 1793432621.6355245,
     "ast_hash": "413693d987fb1e7dd38ab97fb7819a8c",
     "semantic_hash": ""
   },
@@ -408,8 +408,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/Sidebar.tsx": {
-    "mtime": 1793429679.5275226,
-    "seen": 1793429928.096372,
+    "mtime": 1793429999.2631612,
+    "seen": 1793432621.6361356,
     "ast_hash": "05bf06cdcaca5d5c9beb6ffff2ca4ecd",
     "semantic_hash": ""
   },
@@ -420,8 +420,8 @@
     "semantic_hash": ""
   },
   "frontend/src/context/ResearchContext.tsx": {
-    "mtime": 1793429857.7761679,
-    "seen": 1793429928.098637,
+    "mtime": 1793429999.4279783,
+    "seen": 1793432621.641794,
     "ast_hash": "0c67d9c3c71aa8ec3536683a27335100",
     "semantic_hash": ""
   },
@@ -450,8 +450,8 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/RankingsTab.tsx": {
-    "mtime": 1793429786.640699,
-    "seen": 1793429928.0996318,
+    "mtime": 1793429999.5315065,
+    "seen": 1793432621.6446192,
     "ast_hash": "7c5dab711beaee9f35ec95acf8dea2b2",
     "semantic_hash": ""
   },
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "backend/app/services/ml/restoration_planner.py": {
-    "mtime": 1793392078.0031536,
-    "seen": 1793392885.377408,
-    "ast_hash": "adafd48e6d254c0474428451be0d999d",
+    "mtime": 1793432301.756072,
+    "seen": 1793432621.6232896,
+    "ast_hash": "27546d3a01f79d4e9c20fd626d5f6247",
     "semantic_hash": ""
   },
   "frontend/src/tabs/FarmsRoadsTab.tsx": {
@@ -618,9 +618,9 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/PlanBudgetTab.tsx": {
-    "mtime": 1793424214.9093466,
-    "seen": 1793425190.1148963,
-    "ast_hash": "b76e0ff45014efc22146f50332388b07",
+    "mtime": 1793432515.5903244,
+    "seen": 1793432621.6446145,
+    "ast_hash": "31c7cc4c53d592c266c26b3aae44158b",
     "semantic_hash": ""
   },
   "frontend/src/tabs/ReforestationTab.tsx": {
@@ -636,8 +636,8 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/TerrainHealthTab.tsx": {
-    "mtime": 1793429752.6493545,
-    "seen": 1793429928.099982,
+    "mtime": 1793429999.7305453,
+    "seen": 1793432621.645546,
     "ast_hash": "0a87b324170d5e0ce9e7c9d71719f8ac",
     "semantic_hash": ""
   },
@@ -654,9 +654,9 @@
     "semantic_hash": ""
   },
   "backend/app/schemas/plans.py": {
-    "mtime": 1793407329.5155265,
-    "seen": 1793409537.4203336,
-    "ast_hash": "5347564daf20d2ca9e91ebdeb3c2a3bf",
+    "mtime": 1793432184.518901,
+    "seen": 1793432621.6164446,
+    "ast_hash": "f55f567f9fa9f4ac1ae15d14f4cdf67e",
     "semantic_hash": ""
   },
   "backend/app/schemas/predict.py": {
@@ -823,7 +823,7 @@
   },
   "backend/scripts/supabase_rbac_rls.sql": {
     "mtime": 1793397630.5806584,
-    "seen": 1793427533.621296,
+    "seen": 1793429957.6827967,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -846,9 +846,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/ProfileModal.tsx": {
-    "mtime": 1793429614.5585065,
-    "seen": 1793429928.0963693,
-    "ast_hash": "2756afb936638b1da515f03b037ba1af",
+    "mtime": 1793429999.1759036,
+    "seen": 1793432621.6361299,
+    "ast_hash": "595200501628c92dc46b1360b2239865",
     "semantic_hash": ""
   },
   "frontend/package-lock.json": {

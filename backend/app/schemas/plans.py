@@ -69,6 +69,31 @@ class PlanApproval(BaseModel):
     comments: Optional[str] = None
 
 
+class PlanGenerateRequest(BaseModel):
+    area_sq_km: Optional[float] = None
+    mean_slope_deg: Optional[float] = None
+    bare_soil_pct: Optional[float] = None
+    cropland_pct: Optional[float] = None
+    centroid: Optional[List[float]] = None
+    area_name: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
+    river_basin: Optional[str] = None
+    score: Optional[float] = None
+    soil_loss_t_ha_yr: Optional[float] = None
+    watershed_code: Optional[str] = None
+    watershed_id: Optional[uuid.UUID] = None
+
+    # Counterfactual slider levers
+    reforest_pct: Optional[float] = None
+    check_dams: Optional[int] = None
+    cct_pct: Optional[float] = None
+    stream_repair_km: Optional[float] = None
+    barriers_removed: Optional[int] = None
+    road_stabilize_km: Optional[float] = None
+    cover_crop_pct: Optional[float] = None
+
+
 class PlanResponse(BaseModel):
     id: uuid.UUID
     area_name: str
