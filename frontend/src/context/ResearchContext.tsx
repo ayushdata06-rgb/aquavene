@@ -54,7 +54,7 @@ interface ResearchContextType {
   removeIntervention: (id: string) => void;
   updateInterventionCoord: (id: string, lat: number, lon: number) => void;
   removeBarrier: (id: string) => void;
-  analyzeFourPointsAOI: (pts?: FourPointMarker[], customName?: string) => Promise<ActiveArea>;
+  analyzeFourPointsAOI: (pts?: FourPointMarker[], customName?: string, customCode?: string, customId?: string) => Promise<ActiveArea>;
   selectWatershed: (ws: Watershed | PriorityScore) => Promise<void>;
   loadSampleArea: () => void;
   loadPresetCatchment: (presetKey: string) => Promise<ActiveArea | void>;
@@ -327,7 +327,7 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   /**
    * Primary analysis pipeline: Directly calls 100% real live APIs
    */
-  const analyzeFourPointsAOI = async (pts?: FourPointMarker[], customName?: string): Promise<ActiveArea> => {
+  const analyzeFourPointsAOI = async (pts?: FourPointMarker[], customName?: string, customCode?: string, customId?: string): Promise<ActiveArea> => {
     const pointsToUse = pts || fourPoints;
     if (pointsToUse.length !== 4) {
       throw new Error('Please select all 4 corner points on the map first.');
@@ -450,9 +450,9 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const peakDay = finalHydrograph.reduce((max: any, h: any) => (h.discharge_m3s > max.discharge_m3s ? h : max), finalHydrograph[0]);
 
       const newArea: ActiveArea = {
-        id: `aoi-${Date.now()}`,
+        id: customId || `aoi-${Date.now()}`,
         name: customName || liveLoc.display_name,
-        code: 'LIVE-AOI-4PT',
+        code: customCode || 'LIVE-AOI-4PT',
         district: liveLoc.district,
         state: liveLoc.state,
         area_sq_km: calculatedAreaSqKm,
@@ -577,7 +577,9 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       setFourPoints(pts);
       const wsName = ('name' in ws && ws.name) ? ws.name : ('watershed_name' in ws ? (ws as any).watershed_name : ws.watershed_code);
-      await analyzeFourPointsAOI(pts, wsName);
+      const wsCode = ('watershed_code' in ws && ws.watershed_code) ? ws.watershed_code : ('code' in ws ? (ws as any).code : undefined);
+      const wsId = ('id' in ws && ws.id) ? String(ws.id) : undefined;
+      await analyzeFourPointsAOI(pts, wsName, wsCode, wsId);
     } finally {
       setIsAnalyzing(false);
     }

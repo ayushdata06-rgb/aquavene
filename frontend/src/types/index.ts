@@ -130,12 +130,60 @@ export interface PriorityScore {
   state: string;
   district: string;
   basin_name: string;
+  area_sq_km?: number;
   overall_score: number;
   priority_category: any;
   rank_position: number;
   indicator_breakdown: any;
   data_completeness: number;
+  centroid?: [number, number];
   calculated_at?: string;
+}
+
+export interface TerrainElevationPoint {
+  station: string;
+  distance_km: number;
+  elevation_m: number;
+  slope_deg: number;
+  flow_m3s: number;
+}
+
+export interface USLEFactorsDetail {
+  soil_loss_t_ha_yr: number;
+  r_factor: number;
+  k_factor: number;
+  ls_factor: number;
+  c_factor: number;
+  p_factor: number;
+  tolerable_t_ha_yr: number;
+  erosion_ratio_vs_tolerable: number;
+}
+
+export interface TerrainHealthData {
+  watershed_id: string;
+  watershed_code: string;
+  watershed_name: string;
+  state: string;
+  district: string;
+  basin_name: string;
+  relief_m: number;
+  mean_slope_deg: number;
+  drainage_density: number;
+  topographic_wetness_index: number;
+  stream_power_index: number;
+  usle: USLEFactorsDetail;
+  bare_soil_pct: number;
+  plant_cover_pct: number;
+  cropland_pct: number;
+  monsoon_storm_p95: number;
+  rainfall_30d_mm: number;
+  rainfall_anomaly_pct: number;
+  composite_score: number;
+  priority_category: string;
+  elevation_profile: TerrainElevationPoint[];
+  hydrograph: Array<{ day: string; rainfall_mm: number; discharge_m3s: number; flood_threshold?: number }>;
+  shap_drivers: Array<{ feature_key: string; label: string; description: string; impact_pts: number; is_aggravating: boolean }>;
+  engine_version: string;
 }
 
 export interface Scenario {
@@ -146,6 +194,42 @@ export interface Scenario {
   baseline_scoring_run_id?: string;
   created_at: string;
   results?: ScenarioResult[];
+}
+
+export interface TeamOfficer {
+  id: string;
+  fullName: string;
+  email: string;
+  specialization: string;
+  role: Role;
+  status: 'active' | 'invited';
+  assignedRegionsCount: number;
+  avatarUrl?: string;
+  joinedAt: string;
+}
+
+export interface RegionResearchTask {
+  id: string;
+  regionId: string;
+  regionCode: string;
+  regionName: string;
+  basinName: string;
+  assignedToEmail: string;
+  assignedToName: string;
+  priority: 'Urgent' | 'High' | 'Normal';
+  objectives: string;
+  dueDate: string;
+  status: 'pending' | 'in_progress' | 'submitted' | 'approved';
+  createdAt: string;
+  submittedReport?: {
+    title: string;
+    fieldNotes: string;
+    measuredSlopeDeg?: number;
+    measuredSoilLoss?: number;
+    fileName?: string;
+    fileSize?: string;
+    submittedAt: string;
+  };
 }
 
 export interface ScenarioResult {

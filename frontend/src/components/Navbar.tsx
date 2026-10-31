@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useResearch } from '../context/ResearchContext';
 import { AuthModal } from './AuthModal';
+import { ProfileModal } from './ProfileModal';
 import { apiClient } from '../api/client';
 import { DataResolutionModal } from './DataResolutionModal';
 
@@ -27,6 +28,8 @@ export const Navbar: React.FC = () => {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profileModalTab, setProfileModalTab] = useState<'role' | 'team' | 'tasks' | 'submit_report'>('role');
   const [modalTab, setModalTab] = useState<'quick' | 'custom' | 'google' | 'matrix'>('quick');
   const [syncStatus, setSyncStatus] = useState<'live' | 'degraded' | 'offline'>('live');
   const [isResolutionModalOpen, setIsResolutionModalOpen] = useState(false);
@@ -140,12 +143,25 @@ export const Navbar: React.FC = () => {
                   <button
                     onClick={() => {
                       setIsDropdownOpen(false);
-                      navigate('/auth');
+                      setProfileModalTab('role');
+                      setIsProfileModalOpen(true);
                     }}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-hydro-panel flex items-center gap-2.5 text-slate-300 hover:text-white transition-colors"
                   >
                     <UserCheck className="w-4 h-4 text-cyan-400 shrink-0" />
-                    <span>Role & Onboarding Dashboard</span>
+                    <span>Profile, Roles & Access Control</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setProfileModalTab(user?.role === 'admin' ? 'team' : 'tasks');
+                      setIsProfileModalOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-hydro-panel flex items-center gap-2.5 text-slate-300 hover:text-white transition-colors"
+                  >
+                    <Shield className="w-4 h-4 text-purple-400 shrink-0" />
+                    <span>{user?.role === 'admin' ? 'Team & Region Assignments' : 'My Assigned Research Tasks'}</span>
                   </button>
 
                   <button
@@ -157,18 +173,6 @@ export const Navbar: React.FC = () => {
                   >
                     <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>Data Provenance & Uncertainty</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setModalTab('matrix');
-                      setIsModalOpen(true);
-                      setIsDropdownOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-hydro-panel flex items-center gap-2.5 text-slate-300 hover:text-white transition-colors"
-                  >
-                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>RBAC Permissions Dialog</span>
                   </button>
                 </div>
 
@@ -189,6 +193,12 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       </header>
+
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        defaultTab={profileModalTab}
+      />
 
       <AuthModal
         isOpen={isModalOpen}

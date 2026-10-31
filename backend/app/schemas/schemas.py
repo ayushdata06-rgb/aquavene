@@ -139,16 +139,20 @@ class ProcessingJobResponse(BaseModel):
 # ---- Priority / Ranking ----
 
 class RankingEntry(BaseModel):
+    id: Optional[uuid.UUID] = None
     rank_position: int
     watershed_id: uuid.UUID
     watershed_code: str
     watershed_name: str
     state: Optional[str] = None
     district: Optional[str] = None
+    basin_name: Optional[str] = None
+    area_sq_km: Optional[float] = None
     overall_score: float
     priority_category: str
     indicator_breakdown: Optional[Dict[str, Any]] = None
-    data_completeness: float
+    data_completeness: float = 1.0
+    centroid: Optional[List[float]] = None
 
     model_config = {"from_attributes": True}
 

@@ -24,6 +24,7 @@ from app.api import (
     predict,
     processing,
     rankings,
+    terrain,
     watersheds,
 )
 
@@ -125,6 +126,7 @@ def create_app() -> FastAPI:
     app.include_router(predict.router, prefix="/api/predict", tags=["ML Prediction Suite"])
     app.include_router(watersheds.router, prefix="/api/watersheds", tags=["Watersheds"])
     app.include_router(rankings.router, prefix="/api", tags=["Rankings"])
+    app.include_router(terrain.router, prefix="/api/terrain", tags=["Terrain Health"])
     app.include_router(plans.router, prefix="/api/plans", tags=["Restoration Plans & DPRs"])
     app.include_router(exports.router, prefix="/api/exports", tags=["Exports"])
     app.include_router(datasets.router, prefix="/api/datasets", tags=["Datasets"])

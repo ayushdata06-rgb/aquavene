@@ -523,12 +523,24 @@ export const RankingsTab: React.FC = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             selectWatershed(ws);
+                            navigate('/terrain');
+                          }}
+                          className="px-2 py-1 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-[11px] text-sky-300 font-semibold border border-sky-500/40 transition-colors flex items-center gap-1"
+                          title="Inspect Whitebox slope, USLE soil loss and longitudinal profile"
+                        >
+                          <Mountain className="w-3 h-3 text-sky-400" />
+                          <span>Terrain</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            selectWatershed(ws);
                             navigate('/map');
                           }}
                           className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 hover:text-white font-semibold border border-slate-700 hover:border-slate-600 transition-colors flex items-center gap-1"
                           title="Locate and explore on interactive geospatial map"
                         >
-                          <MapPin className="w-3 h-3 text-sky-400" />
+                          <MapPin className="w-3 h-3 text-emerald-400" />
                           <span>Map</span>
                         </button>
                       </div>

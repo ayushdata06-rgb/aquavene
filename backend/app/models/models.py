@@ -282,19 +282,16 @@ class ScoringRun(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    run_name: Mapped[Optional[str]] = mapped_column(String(255), default="Default Run")
     scoring_profile_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("scoring_profiles.id", ondelete="SET NULL"), nullable=True
     )
+    reference_period_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    reference_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     method_version: Mapped[str] = mapped_column(String(50), default="v1.0")
-    run_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    status: Mapped[str] = mapped_column(String(50), default="completed")
+    input_dataset_versions_json = Column(JSONB, nullable=True, default=dict)
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    status: Mapped[str] = mapped_column(String(50), default="completed")
-    weights_used = Column(JSONB, nullable=True, default=dict)
-    input_dataset_versions_json = Column(JSONB, nullable=True, default=dict)
 
     scoring_profile = relationship("ScoringProfile")
     scores = relationship("PriorityScore", back_populates="run", cascade="all, delete-orphan")
@@ -317,12 +314,9 @@ class PriorityScore(Base):
     overall_score: Mapped[float] = mapped_column(Float, nullable=False)
     priority_category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     rank_position: Mapped[int] = mapped_column(Integer, nullable=False)
-    indicator_scores = Column(JSONB, default=dict)
+    indicator_breakdown_json = Column(JSONB, default=dict)
     data_completeness: Mapped[float] = mapped_column(Float, default=1.0)
     calculated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
@@ -332,8 +326,8 @@ class PriorityScore(Base):
         return self.scoring_run_id
 
     @property
-    def indicator_breakdown_json(self):
-        return self.indicator_scores
+    def indicator_scores(self):
+        return self.indicator_breakdown_json
 
     watershed = relationship("Watershed", back_populates="priority_scores")
     run = relationship("ScoringRun", back_populates="scores")
