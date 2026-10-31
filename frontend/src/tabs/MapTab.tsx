@@ -48,9 +48,11 @@ import { useResearch, FourPointMarker } from '../context/ResearchContext';
 import { FIXTURE_WATERSHEDS } from '../api/client';
 import { SiteDiagnosticModal } from '../components/SiteDiagnosticModal';
 import { DataResolutionModal } from '../components/DataResolutionModal';
+import { useAuth } from '../context/AuthContext';
 
 export const MapTab: React.FC = () => {
   const navigate = useNavigate();
+  const { user, signInWithRole } = useAuth();
   const {
     activeArea,
     fourPoints,
@@ -132,6 +134,38 @@ export const MapTab: React.FC = () => {
     isDrawModeRef.current = isDrawMode;
   }, [isDrawMode]);
 
+  const addFourPointRef = useRef(addFourPoint);
+  useEffect(() => {
+    addFourPointRef.current = addFourPoint;
+  }, [addFourPoint]);
+
+  // Adjust Leaflet map cursor dynamically when placing corner points
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    const container = mapInstanceRef.current.getContainer();
+    if (isDrawMode || fourPoints.length < 4) {
+      container.style.cursor = 'crosshair';
+    } else {
+      container.style.cursor = '';
+    }
+  }, [isDrawMode, fourPoints.length]);
+
+  // Automatically exit draw mode once all 4 corners are placed
+  useEffect(() => {
+    if (fourPoints.length === 4 && isDrawMode) {
+      setIsDrawMode(false);
+    }
+  }, [fourPoints.length, isDrawMode]);
+
+  const handleToggleDrawMode = () => {
+    if (!isDrawMode) {
+      clearFourPoints();
+      setIsDrawMode(true);
+    } else {
+      setIsDrawMode(false);
+    }
+  };
+
   // Initialize Native Leaflet Canvas
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -185,11 +219,25 @@ export const MapTab: React.FC = () => {
 
       // Map Click Handler for 4-Point Drawing
       map.on('click', (e: L.LeafletMouseEvent) => {
-        if (fourPointsRef.current.length >= 4) {
-          // Boundary is already complete; ignore random map clicks to prevent accidental wipes
-          return;
+        // If in draw mode OR boundary is incomplete (< 4 corners):
+        if (isDrawModeRef.current || fourPointsRef.current.length < 4) {
+          // Instant visual feedback ping
+          const ping = L.circleMarker([e.latlng.lat, e.latlng.lng], {
+            radius: 12,
+            color: '#10b981',
+            fillColor: '#34d399',
+            fillOpacity: 0.85,
+            weight: 2,
+            className: 'animate-ping pointer-events-none',
+          }).addTo(map);
+          setTimeout(() => {
+            try {
+              map.removeLayer(ping);
+            } catch {}
+          }, 500);
+
+          addFourPointRef.current(e.latlng.lat, e.latlng.lng);
         }
-        addFourPoint(e.latlng.lat, e.latlng.lng);
       });
     } catch (err) {
       console.warn('Leaflet map initialization caught error:', err);
@@ -292,20 +340,6 @@ export const MapTab: React.FC = () => {
         }
       });
 
-      // Live smooth polygon boundary re-shaping while dragging
-      marker.on('drag', (e) => {
-        const newPos = e.target.getLatLng();
-        if (polygonLayerRef.current) {
-          const polyCoords = polygonLayerRef.current.getLatLngs() as any;
-          const flatCoords = Array.isArray(polyCoords[0]) ? polyCoords[0] : polyCoords;
-          const idx = fourPoints.findIndex((p) => p.id === pt.id);
-          if (idx !== -1 && flatCoords[idx]) {
-            flatCoords[idx] = newPos;
-            polygonLayerRef.current.setLatLngs(flatCoords);
-          }
-        }
-      });
-
       marker.on('dragend', (e) => {
         const newPos = e.target.getLatLng();
         updateFourPoint(pt.id, newPos.lat, newPos.lng);
@@ -357,6 +391,7 @@ export const MapTab: React.FC = () => {
         dashArray: isComplete ? undefined : '6, 6',
         fillColor: '#10b981',
         fillOpacity: isComplete ? 0.20 : 0.08,
+        interactive: false,
       }).addTo(mapInstanceRef.current);
 
       polygonLayerRef.current = poly;
@@ -387,7 +422,13 @@ export const MapTab: React.FC = () => {
           fillOpacity: (feature?.properties?.fill_opacity || 0.25) * (layerOpacity / 100),
         }),
         onEachFeature: (feature, layer) => {
-          layer.on('click', () => {
+          layer.on('click', (e: any) => {
+            if (isDrawModeRef.current || fourPointsRef.current.length < 4) {
+              if (e.latlng) {
+                addFourPointRef.current(e.latlng.lat, e.latlng.lng);
+              }
+              return;
+            }
             setSelectedFeature({
               category: 'vegetation',
               title: feature.properties.name,
@@ -436,7 +477,13 @@ export const MapTab: React.FC = () => {
           };
         },
         onEachFeature: (feature, layer) => {
-          layer.on('click', () => {
+          layer.on('click', (e: any) => {
+            if (isDrawModeRef.current || fourPointsRef.current.length < 4) {
+              if (e.latlng) {
+                addFourPointRef.current(e.latlng.lat, e.latlng.lng);
+              }
+              return;
+            }
             setSelectedFeature({
               category: 'stream',
               title: feature.properties.name,
@@ -544,7 +591,13 @@ export const MapTab: React.FC = () => {
           opacity: 0.9,
         },
         onEachFeature: (feature, layer) => {
-          layer.on('click', () => {
+          layer.on('click', (e: any) => {
+            if (isDrawModeRef.current || fourPointsRef.current.length < 4) {
+              if (e.latlng) {
+                addFourPointRef.current(e.latlng.lat, e.latlng.lng);
+              }
+              return;
+            }
             setSelectedFeature({
               category: 'road',
               title: feature.properties.road_name,
@@ -725,8 +778,69 @@ export const MapTab: React.FC = () => {
     <div className="relative flex-1 w-full h-full min-h-[500px] overflow-hidden flex flex-col font-sans select-none">
       {/* Top Floating Command Bar & Quick Presets */}
       <div className="absolute top-3 left-3 right-3 z-[400] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-        {/* Left: Search, Draw Toggle & Preset Catchments */}
+        {/* Left: Search, Draw Toggle, Role Switcher & Preset Catchments */}
         <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
+          {/* Dashboard Persona & Role Switcher: Admin, Officer, Planner, Viewer */}
+          <div className="flex items-center space-x-1 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl p-1 shadow-xl">
+            <span className="text-[10px] text-slate-400 font-semibold uppercase px-2 hidden xl:inline">Role Mode:</span>
+            <button
+              onClick={() => signInWithRole('admin')}
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
+                user?.role === 'admin'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30 ring-1 ring-purple-400'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              title="Universal Administrator: Full permissions & system settings"
+            >
+              <span>🛡️ Admin</span>
+            </button>
+            <button
+              onClick={() => signInWithRole('officer')}
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
+                user?.role === 'officer'
+                  ? 'bg-teal-600 text-white shadow-md shadow-teal-600/30 ring-1 ring-teal-400'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              title="District Officer: Ground truthing, mark field interventions"
+            >
+              <span>📋 Officer</span>
+            </button>
+            <button
+              onClick={() => signInWithRole('planner')}
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
+                user?.role === 'planner'
+                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30 ring-1 ring-cyan-400'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              title="State Hydrologist: Run policy simulations & DPR certification"
+            >
+              <span>📊 Planner</span>
+            </button>
+            <button
+              onClick={() => signInWithRole('viewer')}
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
+                user?.role === 'viewer'
+                  ? 'bg-slate-700 text-white shadow-md ring-1 ring-slate-500'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              title="Public Citizen & Researcher: Open hydrology inspection"
+            >
+              <span>👁️ Viewer</span>
+            </button>
+          </div>
+
+          {/* Admin Direct Access Pill on Dashboard */}
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="px-2.5 py-1.5 rounded-xl bg-purple-900/70 border border-purple-500/50 hover:bg-purple-800/80 text-purple-200 text-xs font-bold flex items-center gap-1.5 shadow-xl transition-all"
+              title="Open Universal Administrator Dashboard"
+            >
+              <Shield className="w-3.5 h-3.5 text-purple-400" />
+              <span className="hidden sm:inline">Admin Panel</span>
+            </button>
+          )}
+
           {/* Quick Preset Catchments Ribbon */}
           <div className="hidden lg:flex items-center space-x-1 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl p-1 shadow-xl">
             <span className="text-[10px] text-slate-400 font-semibold uppercase px-2">Presets:</span>
@@ -769,15 +883,16 @@ export const MapTab: React.FC = () => {
 
           {/* Draw 4 Points Toggle Button */}
           <button
-            onClick={() => setIsDrawMode(!isDrawMode)}
+            onClick={handleToggleDrawMode}
             className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xl transition-all ${
               isDrawMode
-                ? 'bg-emerald-500 text-white shadow-emerald-500/30 ring-2 ring-emerald-400'
+                ? 'bg-emerald-500 text-white shadow-emerald-500/30 ring-2 ring-emerald-400 animate-pulse'
                 : 'bg-slate-900/95 text-slate-200 border border-slate-700 hover:bg-slate-800'
             }`}
+            title="Click to place or redraw 4 corner pins directly on the map"
           >
             <Compass className="w-3.5 h-3.5" />
-            <span>{isDrawMode ? 'Drawing 4 Corners...' : 'Draw 4-Corner Area'}</span>
+            <span>{isDrawMode ? 'Drawing 4 Corners...' : fourPoints.length === 4 ? 'Redraw 4 Corners' : 'Draw 4-Corner Area'}</span>
           </button>
 
           {/* Undo Point / Clear All Drawn Elements */}
@@ -864,20 +979,31 @@ export const MapTab: React.FC = () => {
       </div>
 
       {/* Floating 4-Point Drawing Assistant Card */}
-      {isDrawMode && fourPoints.length < 4 && (
-        <div className="absolute top-16 left-3 z-[400] bg-slate-900/95 backdrop-blur-md border border-emerald-500/50 rounded-2xl p-4 shadow-2xl max-w-sm space-y-2 pointer-events-auto">
-          <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400">
-            <Compass className="w-4 h-4 animate-spin" />
-            <span>4-Corner Boundary Mode</span>
+      {(isDrawMode || (fourPoints.length > 0 && fourPoints.length < 4)) && fourPoints.length < 4 && (
+        <div className="absolute top-16 left-3 z-[400] bg-slate-900/95 backdrop-blur-md border border-emerald-500/50 rounded-2xl p-4 shadow-2xl max-w-sm space-y-2 pointer-events-auto animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400">
+              <Compass className="w-4 h-4 animate-spin" />
+              <span>4-Corner AOI Drawing Mode</span>
+            </div>
+            <button
+              onClick={() => {
+                setIsDrawMode(false);
+                clearFourPoints();
+              }}
+              className="text-[10px] text-rose-400 hover:text-rose-300 font-bold px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
           <p className="text-xs text-white leading-relaxed font-medium">{nextCornerHint}</p>
           <div className="flex items-center space-x-1.5 pt-1">
             {[1, 2, 3, 4].map((num) => (
               <span
                 key={num}
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border ${
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all ${
                   fourPoints.length >= num
-                    ? 'bg-emerald-500 text-white border-emerald-400'
+                    ? 'bg-emerald-500 text-white border-emerald-400 scale-105 shadow-sm shadow-emerald-500/50'
                     : 'bg-slate-800 text-slate-400 border-slate-700'
                 }`}
               >

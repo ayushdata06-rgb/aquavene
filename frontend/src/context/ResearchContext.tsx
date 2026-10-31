@@ -106,6 +106,11 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const [activeStep, setActiveStep] = useState<number>(1);
   const [fourPoints, setFourPoints] = useState<FourPointMarker[]>(DEFAULT_POINTS);
+  const fourPointsRef = React.useRef<FourPointMarker[]>(DEFAULT_POINTS);
+
+  useEffect(() => {
+    fourPointsRef.current = fourPoints;
+  }, [fourPoints]);
 
   const [sliderValues, setSliderValues] = useState<RestorationSliders>(() => {
     try {
@@ -223,21 +228,22 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [sliderValues, activeArea?.id, activeArea?.score]);
 
   const addFourPoint = (lat: number, lon: number) => {
-    let current = fourPoints;
+    let current = fourPointsRef.current;
+    // If 4 corners already placed and user clicks to place a point, reset and start fresh from P1
     if (current.length >= 4) {
-      // 4 corners already placed; keep intact until explicitly cleared
-      return;
+      current = [];
     }
     const labels = ['P1 (NW)', 'P2 (NE)', 'P3 (SE)', 'P4 (SW)'];
     const nextIdx = current.length;
     const newPt: FourPointMarker = {
       id: nextIdx + 1,
-      name: labels[nextIdx],
+      name: labels[nextIdx] || `P${nextIdx + 1}`,
       lat: Math.round(lat * 10000) / 10000,
       lon: Math.round(lon * 10000) / 10000,
     };
     const updated = [...current, newPt];
     setFourPoints(updated);
+    fourPointsRef.current = updated;
 
     if (updated.length === 4) {
       analyzeFourPointsAOI(updated);
@@ -245,10 +251,11 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const updateFourPoint = (id: number, lat: number, lon: number) => {
-    const updated = fourPoints.map((p) =>
+    const updated = fourPointsRef.current.map((p) =>
       p.id === id ? { ...p, lat: Math.round(lat * 10000) / 10000, lon: Math.round(lon * 10000) / 10000 } : p
     );
     setFourPoints(updated);
+    fourPointsRef.current = updated;
 
     if (updated.length === 4) {
       analyzeFourPointsAOI(updated);
@@ -256,7 +263,7 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const removePoint = (id: number) => {
-    const updated = fourPoints
+    const updated = fourPointsRef.current
       .filter((p) => p.id !== id)
       .map((p, idx) => ({
         ...p,
@@ -264,15 +271,19 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         name: ['P1 (NW)', 'P2 (NE)', 'P3 (SE)', 'P4 (SW)'][idx] || `P${idx + 1}`,
       }));
     setFourPoints(updated);
+    fourPointsRef.current = updated;
   };
 
   const removeLastFourPoint = () => {
-    if (fourPoints.length === 0) return;
-    setFourPoints(fourPoints.slice(0, -1));
+    if (fourPointsRef.current.length === 0) return;
+    const updated = fourPointsRef.current.slice(0, -1);
+    setFourPoints(updated);
+    fourPointsRef.current = updated;
   };
 
   const clearFourPoints = () => {
     setFourPoints([]);
+    fourPointsRef.current = [];
     setActiveAreaState(null);
     try {
       localStorage.removeItem(STORAGE_ACTIVE_KEY);
@@ -614,6 +625,7 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }));
 
       setFourPoints(pts);
+      fourPointsRef.current = pts;
       return await analyzeFourPointsAOI(pts, preset.name);
     } catch (err) {
       console.warn('loadPresetCatchment error:', err);
@@ -627,6 +639,7 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const clearActiveArea = () => {
     setActiveAreaState(null);
     setFourPoints([]);
+    fourPointsRef.current = [];
     setSliderValues({
       reforest_pct: 20,
       check_dams: 4,

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { apiClient, setAuthToken } from '../api/client';
-import { AuthStatus, AuthUser, UserPersona } from '../types';
+import { AuthStatus, AuthUser, UserPersona, Role } from '../types';
 
 export const PRESET_USERS: UserPersona[] = [
   {
@@ -13,6 +13,15 @@ export const PRESET_USERS: UserPersona[] = [
     title: 'District Watershed & Hydrology Planner',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=faces',
     description: 'Can simulate counterfactual hydrographs, test 5 restoration levers, save certified DPR proposals, and export BoQs.',
+  },
+  {
+    id: 'persona-officer',
+    fullName: 'Sunil Rao',
+    email: 'sunil.rao@watershed.gov.in',
+    role: 'officer',
+    title: 'District Watershed & Field Verification Officer',
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=faces',
+    description: 'Ground-truthing authority: verify field interventions, validate check dam GPS points, and submit work completion audits.',
   },
   {
     id: 'persona-admin',
@@ -46,8 +55,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   signInDemo: (role?: string) => void;
   signInAsPersona: (persona: UserPersona) => void;
-  signInWithRole: (role: 'admin' | 'planner' | 'viewer', customName?: string) => void;
-  switchRoleDemo: (role: 'admin' | 'planner' | 'viewer') => void;
+  signInWithRole: (role: Role, customName?: string) => void;
+  switchRoleDemo: (role: Role) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -225,7 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(personaUser);
   };
 
-  const signInWithRole = (role: 'admin' | 'planner' | 'viewer', customName?: string) => {
+  const signInWithRole = (role: Role, customName?: string) => {
     const defaultPersona = PRESET_USERS.find((p) => p.role === role) || PRESET_USERS[0];
     const newUser: AuthUser = {
       id: `custom-role-${role}`,
@@ -242,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(newUser);
   };
 
-  const switchRoleDemo = (role: 'admin' | 'planner' | 'viewer') => {
+  const switchRoleDemo = (role: Role) => {
     setUser((prev) => {
       const defaultPersona = PRESET_USERS.find((p) => p.role === role) || PRESET_USERS[0];
       if (!prev) {

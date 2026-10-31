@@ -7,3 +7,4 @@
     "install:all": "npm --prefix frontend install"
   }
 }
+

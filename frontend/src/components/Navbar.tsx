@@ -62,13 +62,6 @@ export const Navbar: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const roleStyles = {
-    admin: 'bg-purple-950/80 text-purple-300 border-purple-500/50',
-    planner: 'bg-blue-950/80 text-blue-300 border-blue-500/50',
-    officer: 'bg-teal-950/80 text-teal-300 border-teal-500/50',
-    viewer: 'bg-slate-800/80 text-slate-300 border-slate-600/50',
-  }[user?.role || 'viewer'];
-
   return (
     <>
       <header className="h-14 bg-hydro-surface/95 backdrop-blur border-b border-hydro-border/80 px-4 flex items-center justify-between z-40 select-none">
@@ -109,49 +102,13 @@ export const Navbar: React.FC = () => {
           )}
         </div>
 
-        {/* Right: Sync indicator, Role Pill, User Profile */}
-        <div className="flex items-center gap-3">
-          {/* Data Provenance & Uncertainty Pill */}
-          <button
-            onClick={() => setIsResolutionModalOpen(true)}
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-hydro-panel hover:bg-hydro-card border border-hydro-border hover:border-cyan-500/50 text-[11px] text-slate-300 hover:text-cyan-300 transition-all shadow-sm"
-            title="Inspect DEM grid resolution, sensor accuracy, and confidence intervals"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Data Provenance</span>
-          </button>
-
-          {/* Backend Sync Indicator */}
-          <div
-            title={`Backend sync: ${syncStatus.toUpperCase()}`}
-            className="flex items-center gap-1.5 text-xs text-slate-400 cursor-help"
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                syncStatus === 'live'
-                  ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
-                  : syncStatus === 'degraded'
-                  ? 'bg-amber-400'
-                  : 'bg-rose-500'
-              }`}
-            />
-            <span className="text-[11px] font-mono hidden md:inline capitalize">{syncStatus}</span>
-          </div>
-
-          {/* Role Badge */}
-          <button
-            onClick={() => navigate('/auth')}
-            className={`text-[11px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-full border hover:scale-105 transition-all cursor-pointer ${roleStyles}`}
-            title="Click to view and switch user role in Auth Hub"
-          >
-            {user?.role || 'viewer'}
-          </button>
-
-          {/* User Avatar & Dropdown */}
+        {/* Right: Profile Icon Only */}
+        <div className="flex items-center">
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-2 p-1 pl-2 rounded-full hover:bg-hydro-panel border border-transparent hover:border-hydro-border transition-all"
+              className="p-1 rounded-full hover:bg-hydro-panel border border-transparent hover:border-hydro-border transition-all focus:outline-none flex items-center group"
+              title={`${user?.display_name || user?.full_name || 'User Profile'} (${(user?.role || 'viewer').toUpperCase()})`}
             >
               <img
                 src={
@@ -159,54 +116,72 @@ export const Navbar: React.FC = () => {
                   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=faces'
                 }
                 alt="Profile"
-                className="w-7 h-7 rounded-full object-cover border border-white/20"
+                className="w-8 h-8 rounded-full object-cover border-2 border-slate-700 group-hover:border-aqua-400 transition-colors shadow-sm"
               />
-              <span className="text-xs font-medium text-slate-200 hidden lg:inline truncate max-w-[120px]">
-                {user?.display_name || user?.full_name || 'Dr. Aarav Sharma'}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 rounded-xl bg-hydro-card border border-hydro-border shadow-2xl py-2 z-50 text-xs text-slate-200 animate-fade-up">
-                <div className="px-3 py-2 border-b border-hydro-border/60">
-                  <p className="font-semibold text-white truncate">
-                    {user?.display_name || user?.full_name || 'AquaVane User'}
+              <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-hydro-card border border-hydro-border shadow-2xl py-2.5 z-50 text-xs text-slate-200 animate-fade-up">
+                <div className="px-4 py-2 border-b border-hydro-border/60">
+                  <div className="flex items-center justify-between">
+                    <p className="font-bold text-white truncate text-sm">
+                      {user?.display_name || user?.full_name || 'Dr. Aarav Sharma'}
+                    </p>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-hydro-panel border border-hydro-border text-aqua-400 font-semibold uppercase">
+                      {user?.role || 'viewer'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-mono truncate mt-0.5">
+                    {user?.email || 'viewer@aquavane.gov'}
                   </p>
-                  <p className="text-[11px] text-slate-400 font-mono truncate">{user?.email || 'viewer@aquavane.gov'}</p>
                 </div>
 
-                <div className="py-1">
+                <div className="py-1 px-2 space-y-1">
                   <button
                     onClick={() => {
                       setIsDropdownOpen(false);
                       navigate('/auth');
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-hydro-panel flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-hydro-panel flex items-center gap-2.5 text-slate-300 hover:text-white transition-colors"
                   >
-                    <UserCheck className="w-4 h-4 text-cyan-400" /> Role & Onboarding Hub
+                    <UserCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>Role & Onboarding Dashboard</span>
                   </button>
+
+                  <button
+                    onClick={() => {
+                      setIsResolutionModalOpen(true);
+                      setIsDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-hydro-panel flex items-center gap-2.5 text-slate-300 hover:text-white transition-colors"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Data Provenance & Uncertainty</span>
+                  </button>
+
                   <button
                     onClick={() => {
                       setModalTab('matrix');
                       setIsModalOpen(true);
                       setIsDropdownOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-hydro-panel flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-hydro-panel flex items-center gap-2.5 text-slate-300 hover:text-white transition-colors"
                   >
-                    <Sparkles className="w-4 h-4 text-amber-400" /> Quick Permissions Dialog
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>RBAC Permissions Dialog</span>
                   </button>
                 </div>
 
-                <div className="pt-1 border-t border-hydro-border/60">
+                <div className="pt-1.5 px-2 border-t border-hydro-border/60">
                   <button
                     onClick={() => {
                       signOut();
                       setIsDropdownOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-rose-950/60 text-rose-300 flex items-center gap-2 transition-colors"
+                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-950/60 text-rose-300 flex items-center gap-2.5 transition-colors"
                   >
-                    <LogOut className="w-4 h-4" /> Reset Session
+                    <LogOut className="w-4 h-4 shrink-0" />
+                    <span>Reset Session / Sign Out</span>
                   </button>
                 </div>
               </div>
