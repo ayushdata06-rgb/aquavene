@@ -384,3 +384,4 @@ export const PolicyScenarioTool: React.FC<PolicyScenarioToolProps> = ({ area }) 
     </div>
   );
 };
+

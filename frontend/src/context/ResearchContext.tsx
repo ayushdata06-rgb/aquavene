@@ -603,17 +603,21 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const loadPresetCatchment = async (presetKey: string) => {
-    const preset = PRESET_CATCHMENTS[presetKey] || PRESET_CATCHMENTS.kali;
-    const cornerNames = ['P1 (North-West)', 'P2 (North-East)', 'P3 (South-East)', 'P4 (South-West)'];
-    const pts: FourPointMarker[] = preset.pts.map((coord, idx) => ({
-      id: idx + 1,
-      name: cornerNames[idx],
-      lat: coord[0],
-      lon: coord[1],
-    }));
+    try {
+      const preset = PRESET_CATCHMENTS[presetKey] || PRESET_CATCHMENTS.kali;
+      const cornerNames = ['P1 (North-West)', 'P2 (North-East)', 'P3 (South-East)', 'P4 (South-West)'];
+      const pts: FourPointMarker[] = preset.pts.map((coord, idx) => ({
+        id: idx + 1,
+        name: cornerNames[idx],
+        lat: coord[0],
+        lon: coord[1],
+      }));
 
-    setFourPoints(pts);
-    return await analyzeFourPointsAOI(pts, preset.name);
+      setFourPoints(pts);
+      return await analyzeFourPointsAOI(pts, preset.name);
+    } catch (err) {
+      console.warn('loadPresetCatchment error:', err);
+    }
   };
 
   const loadSampleArea = () => {

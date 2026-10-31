@@ -155,3 +155,4 @@ export const DataResolutionModal: React.FC<DataResolutionModalProps> = ({ isOpen
     </div>
   );
 };
+

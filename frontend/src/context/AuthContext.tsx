@@ -98,13 +98,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => subscription.unsubscribe();
       } else {
         // Check if demo user was saved in localStorage
-        const savedDemo = localStorage.getItem('aquavane_demo_user');
-        if (savedDemo && isMounted) {
-          try {
+        try {
+          const savedDemo = localStorage.getItem('aquavane_demo_user');
+          if (savedDemo && isMounted) {
             const parsed = JSON.parse(savedDemo);
             setUser(parsed);
-          } catch {}
-        }
+          }
+        } catch {}
         if (isMounted) setIsLoading(false);
       }
     };
@@ -183,7 +183,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (supabase && isSupabaseConfigured) {
       await supabase.auth.signOut();
     }
-    localStorage.removeItem('aquavane_demo_user');
+    try {
+      localStorage.removeItem('aquavane_demo_user');
+    } catch {}
     setUser(null);
     setSession(null);
     setTokenState(null);
@@ -201,7 +203,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       provider: 'demo',
       isAuthenticated: true,
     };
-    localStorage.setItem('aquavane_demo_user', JSON.stringify(demoUser));
+    try {
+      localStorage.setItem('aquavane_demo_user', JSON.stringify(demoUser));
+    } catch {}
     setUser(demoUser);
   };
 
@@ -215,7 +219,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       provider: 'persona',
       isAuthenticated: true,
     };
-    localStorage.setItem('aquavane_demo_user', JSON.stringify(personaUser));
+    try {
+      localStorage.setItem('aquavane_demo_user', JSON.stringify(personaUser));
+    } catch {}
     setUser(personaUser);
   };
 
@@ -230,7 +236,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       provider: 'role_select',
       isAuthenticated: true,
     };
-    localStorage.setItem('aquavane_demo_user', JSON.stringify(newUser));
+    try {
+      localStorage.setItem('aquavane_demo_user', JSON.stringify(newUser));
+    } catch {}
     setUser(newUser);
   };
 
@@ -247,11 +255,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           provider: 'demo',
           isAuthenticated: true,
         };
-        localStorage.setItem('aquavane_demo_user', JSON.stringify(newUser));
+        try {
+          localStorage.setItem('aquavane_demo_user', JSON.stringify(newUser));
+        } catch {}
         return newUser;
       }
       const updated: AuthUser = { ...prev, role };
-      localStorage.setItem('aquavane_demo_user', JSON.stringify(updated));
+      try {
+        localStorage.setItem('aquavane_demo_user', JSON.stringify(updated));
+      } catch {}
       return updated;
     });
   };

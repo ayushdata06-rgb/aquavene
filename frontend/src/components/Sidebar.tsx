@@ -111,19 +111,14 @@ export const Sidebar: React.FC = () => {
           return (
             <NavLink
               key={tab.id}
-              to={isLocked ? '#' : tab.path}
-              onClick={(e) => {
-                if (isLocked) {
-                  e.preventDefault();
-                  alert('Define an Area of Interest (AOI) on the map first to unlock this hydrological analysis module.');
-                  return;
-                }
+              to={tab.path}
+              onClick={() => {
                 setActiveTab(tab.step);
               }}
               className={({ isActive }) =>
                 `group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   isLocked
-                    ? 'opacity-40 text-slate-500 hover:bg-transparent cursor-not-allowed'
+                    ? 'text-slate-400 hover:text-slate-200 hover:bg-hydro-panel/40 border-l-4 border-transparent'
                     : isActive
                     ? 'bg-hydro-panel border-l-4 border-aqua-500 text-white font-semibold shadow-md'
                     : 'text-slate-300 hover:text-white hover:bg-hydro-panel/60 border-l-4 border-transparent'

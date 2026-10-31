@@ -1,17 +1,17 @@
 # Graph Report - aquavene  (2026-10-31)
 
 ## Corpus Check
-- 134 files · ~84,074 words
+- 136 files · ~90,205 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 9 file(s) not represented in the graph (top: (none) 3, .example 2, .db 1)
 
 ## Summary
-- 1234 nodes · 2598 edges · 70 communities (47 shown, 23 thin omitted)
+- 1249 nodes · 2617 edges · 77 communities (50 shown, 27 thin omitted)
 - Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 140 edges (avg confidence: 0.94)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5dfaf288`
+- Built from commit: `3e821300`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -21,6 +21,7 @@
 - schemas.py
 - RestorationMLEngine
 - package.json
+- RasterService
 - App.tsx
 - AquaVane REST API Specification
 - VectorService
@@ -30,8 +31,8 @@
 - typing
 - LandCoverService
 - ResearchContext.tsx
-- raster_service.py
 - _to_plan_response
+- tasks.py
 - test_scoring.py
 - compilerOptions
 - export_rankings_csv
@@ -65,12 +66,17 @@
 - HydrologyNetworkService
 - LocationIntelligenceService
 - api/auth.py
-- json
+- calculate_watershed_indicators.py
 - api/dashboard.py
 - react
 - RankingsTab.tsx
+- predict_aoi
+- ErrorBoundary
 - test_auth.py
+- whitebox_service.py
+- package.json
 - derive_hydrology.py
+- get_models_info
 - schemas/dashboard.py
 - jobs.py
 
@@ -79,7 +85,7 @@
 2. `RasterService` - 36 edges
 3. `useResearch()` - 35 edges
 4. `get_settings()` - 33 edges
-5. `lucide-react` - 31 edges
+5. `lucide-react` - 32 edges
 6. `Watershed` - 28 edges
 7. `RestorationMLEngine` - 22 edges
 8. `AuthenticatedUser` - 21 edges
@@ -89,19 +95,19 @@
 ## Surprising Connections (you probably didn't know these)
 - `2. Real-Time ML Engine Components (`app/services/ml/`)` --references--> `AOIFeatureExtractor`  [INFERRED]
   docs/data_pipeline.md → backend/app/services/ml/feature_extractor.py
-- `2.2 Backend Modules (`backend/app/`)` --references--> `PriorityScore`  [INFERRED]
-  docs/architecture.md → backend/app/models/models.py
 - `1. System Overview` --references--> `RestorationMLEngine`  [INFERRED]
   docs/architecture.md → backend/app/services/ml/engine.py
 - `1. System Overview` --references--> `AOIFeatureExtractor`  [INFERRED]
   docs/architecture.md → backend/app/services/ml/feature_extractor.py
 - `ADR 001: 4-Step Guided Flow vs. Disconnected Dashboards` --references--> `ActiveAreaBar()`  [INFERRED]
   docs/architecture.md → frontend/src/components/ActiveAreaBar.tsx
+- `2.2 Backend Modules (`backend/app/`)` --references--> `SavedPlan`  [INFERRED]
+  docs/architecture.md → backend/app/models/models.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (70 total, 23 thin omitted)
+## Communities (77 total, 27 thin omitted)
 
 ### Community 0 - "ResearchContext.tsx"
 Cohesion: 0.05
@@ -116,16 +122,16 @@ Cohesion: 0.06
 Nodes (31): get_dataset(), list_datasets(), health_check(), create_processing_job(), get_processing_job(), check_db_connection(), check_postgis(), DashboardSummary (+23 more)
 
 ### Community 3 - "RestorationMLEngine"
-Cohesion: 0.16
+Cohesion: 0.15
 Nodes (4): simulate_counterfactual(), RestorationMLEngine, test_ml_counterfactual_simulation(), test_ml_engine_analyze_aoi()
 
 ### Community 4 - "package.json"
 Cohesion: 0.06
-Nodes (42): dependencies, clsx@^2.1.1, leaflet@^1.9.4, lucide-react@^0.453.0, react@^18.3.1, react-dom@^18.3.1, react-leaflet@^4.2.1, react-router-dom@^6.23.1 (+34 more)
+Nodes (41): dependencies, clsx@^2.1.1, leaflet@^1.9.4, lucide-react@^0.453.0, react@^18.3.1, react-dom@^18.3.1, react-leaflet@^4.2.1, react-router-dom@^6.23.1 (+33 more)
 
 ### Community 6 - "App.tsx"
-Cohesion: 0.28
-Nodes (17): App(), ActiveAreaBar(), LockedTabBanner(), LockedTabBannerProps, PolicyScenarioTool(), useResearch(), FarmsRoadsTab(), HistoryTab() (+9 more)
+Cohesion: 0.26
+Nodes (17): App(), ActiveAreaBar(), LockedTabBanner(), LockedTabBannerProps, PolicyScenarioTool(), useResearch(), AuthTab(), FarmsRoadsTab() (+9 more)
 
 ### Community 7 - "AquaVane REST API Specification"
 Cohesion: 0.06
@@ -136,7 +142,7 @@ Cohesion: 0.18
 Nodes (3): run_migrations_offline(), run_migrations_online(), upgrade()
 
 ### Community 11 - "test_gis.py"
-Cohesion: 0.13
+Cohesion: 0.15
 Nodes (4): RainfallService, main(), preprocess_rainfall(), test_rainfall_service_synthetic()
 
 ### Community 12 - "typing"
@@ -144,20 +150,20 @@ Cohesion: 0.09
 Nodes (6): get_settings(), Settings, get_db(), _get_engine(), create_app(), lifespan()
 
 ### Community 13 - "LandCoverService"
-Cohesion: 0.12
+Cohesion: 0.10
 Nodes (4): LandCoverService, main(), preprocess_landcover(), test_landcover_service_synthetic()
 
 ### Community 14 - "ResearchContext.tsx"
-Cohesion: 0.23
-Nodes (14): calculatePhysicalHydrology(), fetchLiveElevation(), fetchLiveLocation(), fetchLiveRainfall(), fetchLiveWikipediaArticles(), generateLiveHydrologyLayers(), LiveElevationData, LiveLocationResult (+6 more)
+Cohesion: 0.21
+Nodes (15): calculatePhysicalHydrology(), fetchLiveElevation(), fetchLiveLocation(), fetchLiveRainfall(), fetchLiveWikipediaArticles(), generateLiveHydrologyLayers(), LiveElevationData, LiveLocationResult (+7 more)
 
 ### Community 16 - "_to_plan_response"
 Cohesion: 0.11
 Nodes (11): create_saved_plan(), delete_saved_plan(), get_saved_plan(), list_saved_plans(), _to_plan_response(), update_saved_plan(), BoQLineItem, PlanApproval (+3 more)
 
 ### Community 18 - "test_scoring.py"
-Cohesion: 0.10
-Nodes (13): ScoringProfile, WatershedIndicator, calculate_score(), categorise_score(), run_scoring(), validate_weights(), main(), test_calculate_score_exact() (+5 more)
+Cohesion: 0.11
+Nodes (12): ScoringProfile, calculate_score(), categorise_score(), run_scoring(), validate_weights(), main(), test_calculate_score_exact(), test_determine_priority_category() (+4 more)
 
 ### Community 19 - "compilerOptions"
 Cohesion: 0.11
@@ -168,12 +174,12 @@ Cohesion: 0.22
 Nodes (3): export_rankings_csv(), export_watersheds_geojson(), ScoringRun
 
 ### Community 22 - "test_indicators.py"
-Cohesion: 0.07
-Nodes (16): calculate_downstream_exposure(), calculate_erosion_potential(), calculate_landcover_degradation(), calculate_rainfall_pressure(), _min_max_normalize(), normalize_indicators(), calculate_indicators(), main() (+8 more)
+Cohesion: 0.08
+Nodes (15): calculate_downstream_exposure(), calculate_erosion_potential(), calculate_landcover_degradation(), calculate_rainfall_pressure(), calculate_runoff_potential(), _min_max_normalize(), normalize_indicators(), test_calculate_downstream_exposure() (+7 more)
 
 ### Community 23 - "ContextPanel.tsx"
-Cohesion: 0.06
-Nodes (25): ContextPanel(), ContextPanelProps, ConfirmDialog(), ConfirmDialogProps, HydrographChartProps, HydroPoint, colorStyles, MetricCardProps (+17 more)
+Cohesion: 0.08
+Nodes (17): ConfirmDialog(), ConfirmDialogProps, HydrographChartProps, HydroPoint, colorStyles, MetricCardProps, PVIComponents, PVIRadarChartProps (+9 more)
 
 ### Community 24 - "client"
 Cohesion: 0.15
@@ -181,11 +187,11 @@ Nodes (4): client(), sample_indicator_values(), sample_weights(), temp_dir()
 
 ### Community 25 - "AuthContext.tsx"
 Cohesion: 0.19
-Nodes (13): setAuthToken(), AuthContext, AuthContextType, AuthProvider(), PRESET_USERS, isSupabaseConfigured, supabase, AuthTab() (+5 more)
+Nodes (13): @supabase/supabase-js@^2.118.0, setAuthToken(), AuthContext, AuthContextType, AuthProvider(), PRESET_USERS, isSupabaseConfigured, supabase (+5 more)
 
 ### Community 26 - "preprocess_dem.py"
-Cohesion: 0.12
-Nodes (7): RasterInfo, RasterService, main(), preprocess_dem(), test_slope_calculation(), test_synthetic_dem_creation_and_inspection(), test_whitebox_hydrology_wrapper()
+Cohesion: 0.14
+Nodes (5): RasterInfo, preprocess_dem(), test_slope_calculation(), test_synthetic_dem_creation_and_inspection(), test_whitebox_hydrology_wrapper()
 
 ### Community 27 - "watershed.py"
 Cohesion: 0.16
@@ -208,12 +214,12 @@ Cohesion: 0.20
 Nodes (9): compilerOptions, lib, module, moduleResolution, noEmit, skipLibCheck, target, tsBuildInfoFile (+1 more)
 
 ### Community 33 - "api/predict.py"
-Cohesion: 0.06
-Nodes (17): get_models_info(), predict_aoi(), AOIPredictRequest, AOIPredictResponse, FeatureVector, HydrographPoint, HydrographResult, InterventionLevers (+9 more)
+Cohesion: 0.19
+Nodes (10): AOIPredictRequest, AOIPredictResponse, HydrographPoint, HydrographResult, InterventionLevers, SimulateRequest, SimulateResponse, USLEFactors (+2 more)
 
 ### Community 34 - "models.py"
-Cohesion: 0.14
-Nodes (6): Base, ProcessingJob, SavedPlan, Scenario, ScenarioResult, 2.2 Backend Modules (`backend/app/`)
+Cohesion: 0.11
+Nodes (6): Base, Dataset, Scenario, ScenarioResult, WatershedIndicator, store_indicators()
 
 ### Community 35 - "2. Table Specifications"
 Cohesion: 0.25
@@ -248,7 +254,7 @@ Cohesion: 0.17
 Nodes (6): test_dashboard_summary(), test_export_rankings_csv(), test_health_check(), test_rankings_list(), test_saved_plans_workflow(), test_watersheds_list()
 
 ### Community 56 - "inspect_datasets.py"
-Cohesion: 0.31
+Cohesion: 0.21
 Nodes (3): file_checksum(), inspect_file(), main()
 
 ### Community 57 - "vercel.json"
@@ -263,36 +269,48 @@ Nodes (16): AnnualRainfall, DayForecast, DisasterEvent, FloodAlert, GaugeReading
 Cohesion: 0.10
 Nodes (14): delete_or_deactivate_user(), get_auth_status(), get_me(), list_users(), sync_user_profile(), update_user_role(), Profile, AuthenticatedUser (+6 more)
 
-### Community 63 - "json"
-Cohesion: 0.14
-Nodes (3): calculate_runoff_potential(), IndicatorService, store_indicators()
+### Community 63 - "calculate_watershed_indicators.py"
+Cohesion: 0.21
+Nodes (3): IndicatorService, calculate_indicators(), main()
 
 ### Community 64 - "api/dashboard.py"
-Cohesion: 0.14
-Nodes (5): get_dashboard_summary(), get_rankings(), Dataset, PriorityScore, RankingEntry
+Cohesion: 0.11
+Nodes (7): get_dashboard_summary(), get_rankings(), PriorityScore, ProcessingJob, SavedPlan, RankingEntry, 2.2 Backend Modules (`backend/app/`)
 
 ### Community 65 - "react"
-Cohesion: 0.23
-Nodes (12): apiClient, AuthModal(), AuthModalProps, Layout(), Navbar(), OnboardingModal(), Sidebar(), TABS (+4 more)
+Cohesion: 0.14
+Nodes (20): apiClient, AuthModal(), AuthModalProps, ContextPanel(), ContextPanelProps, Layout(), Navbar(), OnboardingModal() (+12 more)
 
 ### Community 66 - "RankingsTab.tsx"
-Cohesion: 0.18
-Nodes (12): DataResolutionModal(), DataResolutionModalProps, POLICY_PRESETS, PolicyPreset, PolicyScenarioToolProps, SiteDiagnosticModal(), SiteDiagnosticModalProps, FourPointMarker (+4 more)
+Cohesion: 0.26
+Nodes (11): DataResolutionModal(), DataResolutionModalProps, POLICY_PRESETS, PolicyPreset, PolicyScenarioToolProps, SiteDiagnosticModal(), SiteDiagnosticModalProps, MapTab() (+3 more)
+
+### Community 67 - "predict_aoi"
+Cohesion: 0.25
+Nodes (4): predict_aoi(), FeatureVector, SHAPResult, TreeSHAPExplainer
+
+### Community 69 - "ErrorBoundary"
+Cohesion: 0.20
+Nodes (4): ErrorBoundary, Props, State, leaflet
 
 ### Community 70 - "test_auth.py"
 Cohesion: 0.21
 Nodes (5): create_test_token(), test_auth_enabled_strict_rejection(), test_auth_status_endpoint(), test_get_me_with_valid_bearer_token(), test_jwt_generation_and_decoding()
 
+### Community 72 - "package.json"
+Cohesion: 0.29
+Nodes (6): name, private, scripts, build, install:all, version
+
 ### Community 73 - "derive_hydrology.py"
-Cohesion: 0.23
-Nodes (4): derive_hydrology(), main(), load_data(), main()
+Cohesion: 0.18
+Nodes (5): derive_hydrology(), main(), load_data(), main(), main()
 
 ### Community 75 - "schemas/dashboard.py"
 Cohesion: 0.36
 Nodes (4): AdminDashboard, DashboardSummary, PlannerDashboard, ViewerDashboard
 
 ## Knowledge Gaps
-- **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -308,6 +326,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `schemas.py` be split into smaller, more focused modules?**
   _Cohesion score 0.05909090909090909 - nodes in this community are weakly interconnected._
 - **Should `package.json` be split into smaller, more focused modules?**
-  _Cohesion score 0.06025369978858351 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06201550387596899 - nodes in this community are weakly interconnected._
 - **Should `RasterService` be split into smaller, more focused modules?**
-  _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10153846153846154 - nodes in this community are weakly interconnected._

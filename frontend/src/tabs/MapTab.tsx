@@ -134,74 +134,86 @@ export const MapTab: React.FC = () => {
 
   // Initialize Native Leaflet Canvas
   useEffect(() => {
-    if (!mapContainerRef.current || mapInstanceRef.current) return;
+    if (!mapContainerRef.current) return;
+    if (mapInstanceRef.current) return;
 
-    const initialLat = activeArea?.coordinates?.[0]?.[0] || 15.15;
-    const initialLon = activeArea?.coordinates?.[0]?.[1] || 74.35;
-
-    const map = L.map(mapContainerRef.current, {
-      center: [initialLat, initialLon],
-      zoom: 8,
-      zoomControl: false,
-      attributionControl: false,
-    });
-
-    mapInstanceRef.current = map;
-
-    // Layer groups
-    markersGroupRef.current = L.layerGroup().addTo(map);
-    flowVectorsLayerRef.current = L.layerGroup().addTo(map);
-    barriersLayerRef.current = L.layerGroup().addTo(map);
-    worksMarkersRef.current = L.layerGroup().addTo(map);
-
-    // Initial tile layer: 100% Free OpenStreetMap (Standard Leaflet, zero API key)
-    baseTileLayerRef.current = L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {
-        subdomains: ['a', 'b', 'c'],
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
+    try {
+      // Clean up any stale Leaflet id on the DOM node to prevent "Map container is already initialized"
+      if ((mapContainerRef.current as any)._leaflet_id) {
+        delete (mapContainerRef.current as any)._leaflet_id;
       }
-    ).addTo(map);
 
-    // Mouse coordinate listener
-    map.on('mousemove', (e: L.LeafletMouseEvent) => {
-      setMouseCoords({
-        lat: Math.round(e.latlng.lat * 10000) / 10000,
-        lng: Math.round(e.latlng.lng * 10000) / 10000,
+      const initialLat = activeArea?.coordinates?.[0]?.[0] || 15.15;
+      const initialLon = activeArea?.coordinates?.[0]?.[1] || 74.35;
+
+      const map = L.map(mapContainerRef.current, {
+        center: [initialLat, initialLon],
+        zoom: 8,
+        zoomControl: false,
+        attributionControl: false,
       });
-    });
 
-    map.on('zoomend', () => {
-      setZoomLevel(map.getZoom());
-    });
+      mapInstanceRef.current = map;
 
-    // Map Click Handler for 4-Point Drawing
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      if (fourPointsRef.current.length >= 4) {
-        // Boundary is already complete; ignore random map clicks to prevent accidental wipes
-        return;
-      }
-      addFourPoint(e.latlng.lat, e.latlng.lng);
-    });
+      // Layer groups
+      markersGroupRef.current = L.layerGroup().addTo(map);
+      flowVectorsLayerRef.current = L.layerGroup().addTo(map);
+      barriersLayerRef.current = L.layerGroup().addTo(map);
+      worksMarkersRef.current = L.layerGroup().addTo(map);
+
+      // Initial tile layer: 100% Free OpenStreetMap (Standard Leaflet, zero API key)
+      baseTileLayerRef.current = L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          subdomains: ['a', 'b', 'c'],
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors',
+        }
+      ).addTo(map);
+
+      // Mouse coordinate listener
+      map.on('mousemove', (e: L.LeafletMouseEvent) => {
+        setMouseCoords({
+          lat: Math.round(e.latlng.lat * 10000) / 10000,
+          lng: Math.round(e.latlng.lng * 10000) / 10000,
+        });
+      });
+
+      map.on('zoomend', () => {
+        setZoomLevel(map.getZoom());
+      });
+
+      // Map Click Handler for 4-Point Drawing
+      map.on('click', (e: L.LeafletMouseEvent) => {
+        if (fourPointsRef.current.length >= 4) {
+          // Boundary is already complete; ignore random map clicks to prevent accidental wipes
+          return;
+        }
+        addFourPoint(e.latlng.lat, e.latlng.lng);
+      });
+    } catch (err) {
+      console.warn('Leaflet map initialization caught error:', err);
+    }
 
     // Invalidate size on container layout changes to avoid grey/blank canvas
     const resizeObserver = new ResizeObserver(() => {
-      map.invalidateSize();
+      mapInstanceRef.current?.invalidateSize();
     });
     if (mapContainerRef.current) {
       resizeObserver.observe(mapContainerRef.current);
     }
 
-    const t1 = setTimeout(() => map.invalidateSize(), 150);
-    const t2 = setTimeout(() => map.invalidateSize(), 500);
+    const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 150);
+    const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 500);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       resizeObserver.disconnect();
-      map.remove();
-      mapInstanceRef.current = null;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
   }, []);
 
@@ -280,6 +292,20 @@ export const MapTab: React.FC = () => {
         }
       });
 
+      // Live smooth polygon boundary re-shaping while dragging
+      marker.on('drag', (e) => {
+        const newPos = e.target.getLatLng();
+        if (polygonLayerRef.current) {
+          const polyCoords = polygonLayerRef.current.getLatLngs() as any;
+          const flatCoords = Array.isArray(polyCoords[0]) ? polyCoords[0] : polyCoords;
+          const idx = fourPoints.findIndex((p) => p.id === pt.id);
+          if (idx !== -1 && flatCoords[idx]) {
+            flatCoords[idx] = newPos;
+            polygonLayerRef.current.setLatLngs(flatCoords);
+          }
+        }
+      });
+
       marker.on('dragend', (e) => {
         const newPos = e.target.getLatLng();
         updateFourPoint(pt.id, newPos.lat, newPos.lng);
@@ -336,7 +362,9 @@ export const MapTab: React.FC = () => {
       polygonLayerRef.current = poly;
 
       if (isComplete && fourPoints.length === 4) {
-        mapInstanceRef.current.fitBounds(poly.getBounds(), { padding: [50, 50], maxZoom: 12 });
+        try {
+          mapInstanceRef.current.fitBounds(poly.getBounds(), { padding: [50, 50], maxZoom: 12 });
+        } catch {}
       }
     }
   }, [fourPoints]);
@@ -694,7 +722,7 @@ export const MapTab: React.FC = () => {
   const elevationData = activeArea?.hydrology_network?.elevation_profile || [];
 
   return (
-    <div className="relative h-[calc(100vh-6rem)] w-full overflow-hidden flex flex-col font-sans select-none">
+    <div className="relative flex-1 w-full h-full min-h-[500px] overflow-hidden flex flex-col font-sans select-none">
       {/* Top Floating Command Bar & Quick Presets */}
       <div className="absolute top-3 left-3 right-3 z-[400] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Left: Search, Draw Toggle & Preset Catchments */}
@@ -1338,7 +1366,11 @@ export const MapTab: React.FC = () => {
       )}
 
       {/* Native Leaflet Map Canvas */}
-      <div ref={mapContainerRef} className="w-full h-full z-0 cursor-crosshair" />
+      <div
+        ref={mapContainerRef}
+        className="absolute inset-0 w-full h-full z-0 cursor-crosshair"
+        style={{ minHeight: '100%', height: '100%', width: '100%' }}
+      />
 
       {/* Slide-Over Ranked Catchments Panel */}
       {showRankingsDrawer && (

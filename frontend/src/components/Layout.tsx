@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
 import { ContextPanel } from './ContextPanel';
 import { OnboardingModal } from './OnboardingModal';
+import { ErrorBoundary } from './ErrorBoundary';
 
 export const Layout: React.FC = () => {
   const location = useLocation();
@@ -25,11 +26,13 @@ export const Layout: React.FC = () => {
 
         {/* Center Main Stage (flex-1) */}
         <main
-          className={`flex-1 relative bg-hydro-surface flex flex-col ${
+          className={`flex-1 relative bg-hydro-surface flex flex-col min-h-0 ${
             isMapTab ? 'p-0 overflow-hidden' : 'overflow-y-auto p-4 sm:p-6 lg:p-8 scrollbar-thin'
           }`}
         >
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
 
         {/* Right Intelligence Context Panel (w-80, toggleable) */}

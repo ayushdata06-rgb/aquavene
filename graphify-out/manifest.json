@@ -366,8 +366,8 @@
     "semantic_hash": ""
   },
   "frontend/src/api/client.ts": {
-    "mtime": 1793423454.803423,
-    "seen": 1793424120.6959453,
+    "mtime": 1793424214.3741896,
+    "seen": 1793425190.1127238,
     "ast_hash": "acb66a576379cc91803d51bcd2761b48",
     "semantic_hash": ""
   },
@@ -384,9 +384,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/Layout.tsx": {
-    "mtime": 1793421868.5924046,
-    "seen": 1793422636.1598907,
-    "ast_hash": "c19d96d84ddfdab285c72ae55cff5228",
+    "mtime": 1793424978.764609,
+    "seen": 1793425190.113024,
+    "ast_hash": "0528384315f74c2020dded3d3ee42769",
     "semantic_hash": ""
   },
   "frontend/src/components/LockedTabBanner.tsx": {
@@ -408,21 +408,21 @@
     "semantic_hash": ""
   },
   "frontend/src/components/Sidebar.tsx": {
-    "mtime": 1793423248.597931,
-    "seen": 1793424120.696718,
-    "ast_hash": "bcddc2c05b05f01eb6fac1649efd05db",
+    "mtime": 1793425095.2112143,
+    "seen": 1793425190.113311,
+    "ast_hash": "46a8ea8ec50f6a21269ff2c97f6dfdf9",
     "semantic_hash": ""
   },
   "frontend/src/context/AuthContext.tsx": {
-    "mtime": 1793421868.597407,
-    "seen": 1793422636.1604486,
-    "ast_hash": "ea9d9c3d0311ab4ef409eb0d09d863d1",
+    "mtime": 1793425066.4620874,
+    "seen": 1793425190.114511,
+    "ast_hash": "dfacbedb8ed4c1f3f884b83a1c4ab449",
     "semantic_hash": ""
   },
   "frontend/src/context/ResearchContext.tsx": {
-    "mtime": 1793424050.8198872,
-    "seen": 1793424120.6983864,
-    "ast_hash": "ba45278add442bb96571efd6437cc1f7",
+    "mtime": 1793425080.7506876,
+    "seen": 1793425190.114513,
+    "ast_hash": "b3401b278bffc87790965e532d16b316",
     "semantic_hash": ""
   },
   "frontend/src/lib/supabase.ts": {
@@ -432,9 +432,9 @@
     "semantic_hash": ""
   },
   "frontend/src/main.tsx": {
-    "mtime": 1793421868.5904195,
-    "seen": 1793422636.1607764,
-    "ast_hash": "a259521cd281e8caf5249c53b209771e",
+    "mtime": 1793424962.4809713,
+    "seen": 1793425190.1146076,
+    "ast_hash": "8fa20cc1dd18ed171411b1ee002427a9",
     "semantic_hash": ""
   },
   "frontend/src/tabs/HydrologyTab.tsx": {
@@ -444,14 +444,14 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/MapTab.tsx": {
-    "mtime": 1793424066.0137968,
-    "seen": 1793424120.698811,
-    "ast_hash": "62a79cbfe0e102e87d071c01fe84cddd",
+    "mtime": 1793425145.954529,
+    "seen": 1793425190.1148946,
+    "ast_hash": "7d432df4f0fee922d8b82a80ed826ef3",
     "semantic_hash": ""
   },
   "frontend/src/tabs/RankingsTab.tsx": {
-    "mtime": 1793422100.841385,
-    "seen": 1793422636.160801,
+    "mtime": 1793424213.9124987,
+    "seen": 1793425190.1148984,
     "ast_hash": "f98e43ed57d864b1677c793bcaae845a",
     "semantic_hash": ""
   },
@@ -462,8 +462,8 @@
     "semantic_hash": ""
   },
   "frontend/src/types/index.ts": {
-    "mtime": 1793424033.957446,
-    "seen": 1793424120.6990173,
+    "mtime": 1793424214.125929,
+    "seen": 1793425190.116113,
     "ast_hash": "38ceb9b2831c5da7e421fde15ab1c053",
     "semantic_hash": ""
   },
@@ -606,32 +606,32 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/FarmsRoadsTab.tsx": {
-    "mtime": 1793423931.149913,
-    "seen": 1793424120.6987016,
+    "mtime": 1793424214.677943,
+    "seen": 1793425190.1147172,
     "ast_hash": "dbd8a1a4a762040f1e7f1753c6b307ad",
     "semantic_hash": ""
   },
   "frontend/src/tabs/HistoryTab.tsx": {
-    "mtime": 1793423889.6314132,
-    "seen": 1793424120.6987035,
+    "mtime": 1793424214.8197255,
+    "seen": 1793425190.1147187,
     "ast_hash": "507a0ba3213610f8ca00c8e203e95484",
     "semantic_hash": ""
   },
   "frontend/src/tabs/PlanBudgetTab.tsx": {
-    "mtime": 1793423943.9166615,
-    "seen": 1793424120.6988132,
+    "mtime": 1793424214.9093466,
+    "seen": 1793425190.1148963,
     "ast_hash": "b76e0ff45014efc22146f50332388b07",
     "semantic_hash": ""
   },
   "frontend/src/tabs/ReforestationTab.tsx": {
-    "mtime": 1793423902.3827243,
-    "seen": 1793424120.6989126,
+    "mtime": 1793424214.9785159,
+    "seen": 1793425190.1148999,
     "ast_hash": "fea8bfc6daa13f58768c62565d6d12f4",
     "semantic_hash": ""
   },
   "frontend/src/tabs/StreamsWetlandsTab.tsx": {
-    "mtime": 1793423915.3047006,
-    "seen": 1793424120.6990132,
+    "mtime": 1793424215.1336408,
+    "seen": 1793425190.1158812,
     "ast_hash": "e729fb11baa2c74470a03a423fd22d06",
     "semantic_hash": ""
   },
@@ -792,33 +792,69 @@
     "semantic_hash": ""
   },
   "frontend/src/api/liveGeoService.ts": {
-    "mtime": 1793422973.2374647,
-    "seen": 1793424120.6959474,
+    "mtime": 1793424214.4481916,
+    "seen": 1793425190.1127264,
     "ast_hash": "694641c4ed20972b79c28d8dd1f2d372",
     "semantic_hash": ""
   },
   "frontend/src/components/DataResolutionModal.tsx": {
-    "mtime": 1793421868.5924046,
-    "seen": 1793422636.1598866,
-    "ast_hash": "6144de2d40754a96814e6d6296667614",
+    "mtime": 1793424213.0119154,
+    "seen": 1793425190.1130195,
+    "ast_hash": "c2e5f4ed0c1f00d000327207e9f12199",
     "semantic_hash": ""
   },
   "frontend/src/components/PolicyScenarioTool.tsx": {
-    "mtime": 1793421868.593405,
-    "seen": 1793422636.1599033,
-    "ast_hash": "7ce173da28064613b96623e9c6c5734f",
+    "mtime": 1793424202.3400338,
+    "seen": 1793425190.1133091,
+    "ast_hash": "1d2362519d71ae2aa684d57e85b6f228",
     "semantic_hash": ""
   },
   "frontend/src/components/SiteDiagnosticModal.tsx": {
-    "mtime": 1793421868.594404,
-    "seen": 1793422636.1599097,
-    "ast_hash": "3fac7d1b8100faadbc3cf7ef0a5aef1d",
+    "mtime": 1793424202.7127862,
+    "seen": 1793425190.1133125,
+    "ast_hash": "e8726650fd00ce1aa3a240ff809cf75a",
     "semantic_hash": ""
   },
   "frontend/src/tabs/AuthTab.tsx": {
-    "mtime": 1793423175.7714365,
-    "seen": 1793424120.698699,
-    "ast_hash": "d615bcdfbd82f28c15db99602708d54f",
+    "mtime": 1793424214.6315598,
+    "seen": 1793425190.114715,
+    "ast_hash": "63a0917fac1a9fae84d467c306de916c",
+    "semantic_hash": ""
+  },
+  "backend/scripts/supabase_rbac_rls.sql": {
+    "mtime": 1793397630.5806584,
+    "seen": 1793424173.2179878,
+    "ast_hash": "",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ErrorBoundary.tsx": {
+    "mtime": 1793424949.0759642,
+    "seen": 1793425190.1130219,
+    "ast_hash": "c319c509a710e49b88b1c179c77e7a4f",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1793425177.856091,
+    "seen": 1793425190.1173592,
+    "ast_hash": "28b86dd74c35f3369c3fd5b95fb48245",
+    "semantic_hash": ""
+  },
+  "chrome_out.html": {
+    "mtime": 1793424373.2771144,
+    "seen": 1793425190.1181068,
+    "ast_hash": "9b20481e5a6c5934b48fe721377fe599",
+    "semantic_hash": ""
+  },
+  "local_dom.html": {
+    "mtime": 1793424601.631512,
+    "seen": 1793425190.118803,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "local_map.html": {
+    "mtime": 1793424631.4293687,
+    "seen": 1793425190.1188054,
+    "ast_hash": "8e48e0686939f03cb7d36bb1f21e6166",
     "semantic_hash": ""
   },
   "frontend/package-lock.json": {

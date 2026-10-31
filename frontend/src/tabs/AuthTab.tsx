@@ -447,3 +447,4 @@ export const AuthTab: React.FC = () => {
     </div>
   );
 };
+
