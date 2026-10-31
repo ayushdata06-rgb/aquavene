@@ -528,7 +528,13 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ],
         },
         hydrology_network: {
-          ...((backendRes?.hydrology_network?.streams?.features?.length) ? backendRes.hydrology_network : liveHydroLayers),
+          ...liveHydroLayers,
+          ...(backendRes?.hydrology_network || {}),
+          streams: (backendRes?.hydrology_network?.streams?.features?.length) ? backendRes.hydrology_network.streams : liveHydroLayers.streams,
+          vegetation_zones: (backendRes?.hydrology_network?.vegetation_zones?.features?.length) ? backendRes.hydrology_network.vegetation_zones : liveHydroLayers.vegetation_zones,
+          dirt_roads: (backendRes?.hydrology_network?.dirt_roads?.features?.length) ? backendRes.hydrology_network.dirt_roads : liveHydroLayers.dirt_roads,
+          flow_vectors: (backendRes?.hydrology_network?.flow_vectors?.features?.length) ? backendRes.hydrology_network.flow_vectors : liveHydroLayers.flow_vectors,
+          barriers: (backendRes?.hydrology_network?.barriers?.features?.length) ? backendRes.hydrology_network.barriers : liveHydroLayers.barriers,
           elevation_profile: liveHydroLayers.elevation_profile,
         },
         restoration_plan: backendRes?.restoration_plan || {

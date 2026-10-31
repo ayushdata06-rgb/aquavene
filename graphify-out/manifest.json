@@ -420,9 +420,9 @@
     "semantic_hash": ""
   },
   "frontend/src/context/ResearchContext.tsx": {
-    "mtime": 1793427402.6383781,
-    "seen": 1793427517.9690192,
-    "ast_hash": "85abec2f0a88ac484dc8d4bcc62e05bd",
+    "mtime": 1793427901.856428,
+    "seen": 1793428292.5404658,
+    "ast_hash": "4a5c7d4cff3373c3354ee14dbba7b46e",
     "semantic_hash": ""
   },
   "frontend/src/lib/supabase.ts": {
@@ -444,9 +444,9 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/MapTab.tsx": {
-    "mtime": 1793426139.231879,
-    "seen": 1793427517.9698765,
-    "ast_hash": "be1f49f854af20aed5b617831dc1a5d6",
+    "mtime": 1793428193.100043,
+    "seen": 1793428292.5432885,
+    "ast_hash": "8a38f46a685e0ed5791c1991d7e1ee7a",
     "semantic_hash": ""
   },
   "frontend/src/tabs/RankingsTab.tsx": {
@@ -792,9 +792,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/liveGeoService.ts": {
-    "mtime": 1793424214.4481916,
-    "seen": 1793425190.1127264,
-    "ast_hash": "694641c4ed20972b79c28d8dd1f2d372",
+    "mtime": 1793427888.1767414,
+    "seen": 1793428292.5197613,
+    "ast_hash": "299a107b90ec3c68d2fbd452b92009ee",
     "semantic_hash": ""
   },
   "frontend/src/components/DataResolutionModal.tsx": {
@@ -823,7 +823,7 @@
   },
   "backend/scripts/supabase_rbac_rls.sql": {
     "mtime": 1793397630.5806584,
-    "seen": 1793424173.2179878,
+    "seen": 1793427533.621296,
     "ast_hash": "",
     "semantic_hash": ""
   },
