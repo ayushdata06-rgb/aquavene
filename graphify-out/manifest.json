@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "backend/app/config.py": {
-    "mtime": 1793420214.720185,
-    "seen": 1793420290.469609,
+    "mtime": 1793420351.9880035,
+    "seen": 1793421272.0491908,
     "ast_hash": "f6356b0fe561b858774f92873225d4ab",
     "semantic_hash": ""
   },
@@ -366,8 +366,8 @@
     "semantic_hash": ""
   },
   "frontend/src/api/client.ts": {
-    "mtime": 1793420161.944233,
-    "seen": 1793420290.4799476,
+    "mtime": 1793420353.4376402,
+    "seen": 1793421272.0741034,
     "ast_hash": "36b31370cdee94032aa19de6d74e2fec",
     "semantic_hash": ""
   },
@@ -420,14 +420,14 @@
     "semantic_hash": ""
   },
   "frontend/src/context/ResearchContext.tsx": {
-    "mtime": 1793406960.7606452,
-    "seen": 1793407246.6157138,
-    "ast_hash": "91daf5d2a6d60fda00a323c27bf228d8",
+    "mtime": 1793421201.2891672,
+    "seen": 1793421272.0877476,
+    "ast_hash": "c423fcfeb30afbd0a9586f9137d6be08",
     "semantic_hash": ""
   },
   "frontend/src/lib/supabase.ts": {
-    "mtime": 1793420173.2946093,
-    "seen": 1793420290.4827557,
+    "mtime": 1793420353.615832,
+    "seen": 1793421272.0877535,
     "ast_hash": "fb83a7f6884c3e49444aec6943cee9a5",
     "semantic_hash": ""
   },
@@ -444,8 +444,8 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/MapTab.tsx": {
-    "mtime": 1793420198.6004024,
-    "seen": 1793420290.4831946,
+    "mtime": 1793420353.834974,
+    "seen": 1793421272.0891874,
     "ast_hash": "7245b1061dbeffe643eb9cf271b192d8",
     "semantic_hash": ""
   },
@@ -786,9 +786,15 @@
     "semantic_hash": ""
   },
   "vercel.json": {
-    "mtime": 1793420204.7004447,
-    "seen": 1793420290.4848065,
-    "ast_hash": "2e07aac46c65d8a2fd25a964c577b5e5",
+    "mtime": 1793420352.3526597,
+    "seen": 1793421272.0952897,
+    "ast_hash": "1d52882a560fe418fbbb8c64b18c4547",
+    "semantic_hash": ""
+  },
+  "frontend/src/api/liveGeoService.ts": {
+    "mtime": 1793420910.3212955,
+    "seen": 1793421272.0741096,
+    "ast_hash": "2bbad11e1ef206e3eae48daea9c55ce2",
     "semantic_hash": ""
   },
   "frontend/package-lock.json": {
