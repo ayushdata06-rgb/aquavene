@@ -119,3 +119,4 @@ async def run_whitebox_pipeline_job(
         job.error_message = str(exc)
         job.completed_at = datetime.now(timezone.utc)
         db.commit()
+

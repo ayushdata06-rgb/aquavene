@@ -29,7 +29,7 @@ def get_current_user(
     if credentials and credentials.credentials:
         token = credentials.credentials.strip()
         try:
-            secret = settings.jwt_secret or "temporary-fallback-secret-for-dev"
+            secret = settings.jwt_secret or "aquavane-dev-secret-key-32-chars-long"
             payload = decode_supabase_jwt(
                 token=token,
                 secret=secret,
@@ -45,12 +45,11 @@ def get_current_user(
             ) from exc
         except (JWTError, ValueError) as exc:
             logger.warning("Token validation failed: %s", exc)
-            if settings.auth_enabled:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=f"Invalid authentication token: {str(exc)}",
-                    headers={"WWW-Authenticate": "Bearer error=\"invalid_token\""},
-                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid authentication token: {str(exc)}",
+                headers={"WWW-Authenticate": "Bearer error=\"invalid_token\""},
+            ) from exc
 
     if settings.auth_enabled:
         raise HTTPException(
@@ -91,7 +90,7 @@ def get_optional_user(
         return None
     try:
         settings = get_settings()
-        secret = settings.jwt_secret or "temporary-fallback-secret-for-dev"
+        secret = settings.jwt_secret or "aquavane-dev-secret-key-32-chars-long"
         payload = decode_supabase_jwt(
             token=credentials.credentials.strip(),
             secret=secret,

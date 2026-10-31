@@ -1,92 +1,81 @@
-"""AquaVane backend configuration using pydantic-settings."""
+"""AquaVane backend configuration settings using Pydantic Settings."""
 
 from __future__ import annotations
 
-import os
-from functools import lru_cache
-from pathlib import Path
-from typing import List
-
-from pydantic import field_validator
+from typing import List, Optional
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables / .env file."""
+    """Central application configuration."""
 
-    model_config = SettingsConfigDict(
-        env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore",
-    )
-
-    # --- Application ---
+    # Application
     app_name: str = "AquaVane"
     app_env: str = "development"
     debug: bool = True
-    secret_key: str = "change-this-to-a-random-secret-string"
-    allowed_origins: str = "http://localhost:5173,http://localhost:3000"
+    secret_key: str = "aquavane-enterprise-secret-key-production-ready-2026"
 
-    # --- Database ---
-    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/aquavane"
-    database_url_direct: str = ""
+    # Database (Supabase PostgreSQL + PostGIS)
+    database_url: str = "sqlite:///./aquavane_dev.db"
+    database_url_direct: Optional[str] = None
 
-    # --- Supabase ---
-    supabase_url: str = ""
-    supabase_anon_key: str = ""
-    supabase_service_role_key: str = ""
+    # Supabase Credentials
+    supabase_url: Optional[str] = None
+    supabase_anon_key: Optional[str] = None
+    supabase_service_role_key: Optional[str] = None
+
+    # Storage
+    data_dir: str = "./data"
     supabase_storage_bucket: str = "aquavane-rasters"
 
-    # --- Storage ---
-    data_dir: str = "./data"
-
-    # --- WhiteboxTools ---
+    # WhiteboxTools configuration
     whitebox_exe_path: str = "whitebox_tools"
-    whitebox_work_dir: str = "./data/interim/whitebox"
+    whitebox_work_dir: str = "/tmp/whitebox"
+    whitebox_stream_threshold: int = 500
 
-    # --- Processing ---
+    # Hydrograph Physical Defaults (SCS-CN)
+    default_soil_group: str = "B"
+    default_storm_duration_hr: float = 24.0
+    default_amc: str = "II"
+
+    # Public Open Data API Keys (Free Registration)
+    data_gov_api_key: str = ""
+    bhuvan_api_key: str = ""
+
+    # Processing limits
     max_upload_size_mb: int = 500
     processing_timeout_seconds: int = 3600
 
-    # --- Auth ---
+    # Auth & JWT
     auth_enabled: bool = False
-    jwt_secret: str = ""
+    jwt_secret: Optional[str] = "aquavane-dev-secret-key-32-chars-long"
     jwt_algorithm: str = "HS256"
+
+    # Cache & Rate Limiting
+    cache_enabled: bool = True
+    public_rate_limit: str = "60/minute"
+    auth_rate_limit: str = "300/minute"
+
+    # CORS
+    allowed_origins: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
 
     @property
     def allowed_origins_list(self) -> List[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
-    @property
-    def data_path(self) -> Path:
-        return Path(self.data_dir).resolve()
-
-    @property
-    def raw_data_path(self) -> Path:
-        return self.data_path / "raw"
-
-    @property
-    def interim_data_path(self) -> Path:
-        return self.data_path / "interim"
-
-    @property
-    def processed_data_path(self) -> Path:
-        return self.data_path / "processed"
-
-    @property
-    def is_production(self) -> bool:
-        return self.app_env == "production"
-
-    @property
-    def db_url_masked(self) -> str:
-        if "@" in self.database_url:
-            host_part = self.database_url.split("@")[1]
-            return f"postgresql://***:***@{host_part}"
-        return "postgresql://***:***@localhost"
+    model_config = SettingsConfigDict(
+        env_file=(".env", "backend/.env", "../.env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
-@lru_cache()
+_settings: Optional[Settings] = None
+
+
 def get_settings() -> Settings:
-    """Return cached settings instance."""
-    return Settings()
+    global _settings
+    if _settings is None:
+        _settings = Settings()
+    return _settings

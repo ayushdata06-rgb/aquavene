@@ -290,3 +290,4 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({ isOpen, onToggle }) 
     </aside>
   );
 };
+

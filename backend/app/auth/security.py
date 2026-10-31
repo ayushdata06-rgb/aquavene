@@ -63,19 +63,21 @@ def decode_supabase_jwt(
         logger.debug("Standard JWT decode failed (%s); trying base64 fallback", initial_err)
         # Attempt 2: Base64-decoded secret string
         try:
-            padded_secret = clean_secret + "=" * (-len(clean_secret) % 4)
-            decoded_secret_bytes = base64.b64decode(padded_secret)
-            return jwt.decode(
-                clean_token,
-                decoded_secret_bytes,
-                algorithms=[algorithm],
-                options={"verify_aud": False},
-            )
+            clean_sec_no_pad = clean_secret.rstrip("=")
+            if len(clean_sec_no_pad) % 4 != 1:
+                padded_secret = clean_secret + "=" * (-len(clean_secret) % 4)
+                decoded_secret_bytes = base64.b64decode(padded_secret)
+                return jwt.decode(
+                    clean_token,
+                    decoded_secret_bytes,
+                    algorithms=[algorithm],
+                    options={"verify_aud": False},
+                )
         except ExpiredSignatureError:
             raise
-        except Exception as fallback_err:
-            logger.warning("Both standard and base64 JWT decodes failed: %s", fallback_err)
-            raise JWTError(f"Token validation failed: {fallback_err}") from initial_err
+        except Exception:
+            pass
+        raise JWTError(f"Token validation failed: {initial_err}") from initial_err
 
 
 def parse_user_from_claims(claims: Dict[str, Any]) -> AuthenticatedUser:
@@ -130,7 +132,7 @@ def parse_user_from_claims(claims: Dict[str, Any]) -> AuthenticatedUser:
 def create_test_token(
     user_id: str,
     email: str,
-    secret: str = "test-secret-key-12345",
+    secret: str = "aquavane-dev-secret-key-32-chars-long",
     role: str = "planner",
     full_name: str = "Test Officer",
     avatar_url: Optional[str] = None,

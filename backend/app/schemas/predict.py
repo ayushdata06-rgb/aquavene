@@ -131,3 +131,4 @@ class SimulateResponse(BaseModel):
     reduction_pct: float
     new_soil_loss_t_ha_yr: float
     modified_features: Dict[str, float] = Field(default_factory=dict)
+

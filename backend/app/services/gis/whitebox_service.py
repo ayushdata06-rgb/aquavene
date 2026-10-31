@@ -171,3 +171,4 @@ class WhiteboxService:
         # Forest cells: CN ~ 55-65; Agricultural bare soil: CN ~ 82-88
         cn_grid = np.clip(cn_grid + (land_use * 10.0) - (soil_type * 5.0), 30.0, 98.0)
         return cn_grid
+

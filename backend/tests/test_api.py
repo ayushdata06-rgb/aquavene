@@ -57,7 +57,7 @@ def test_export_rankings_csv(client: TestClient):
 def test_saved_plans_workflow(client: TestClient):
     """Test saving, retrieving, listing, and RBAC controls for DPR restoration plans."""
     settings = get_settings()
-    secret = settings.jwt_secret or "test-secret-key-12345"
+    secret = settings.jwt_secret or "aquavane-dev-secret-key-32-chars-long"
 
     planner_token = create_test_token(
         user_id="11111111-2222-3333-4444-555555555555",

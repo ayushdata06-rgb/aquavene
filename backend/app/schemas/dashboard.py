@@ -44,3 +44,4 @@ class DashboardSummary(BaseModel):
     admin_view: Optional[AdminDashboard] = None
     planner_view: Optional[PlannerDashboard] = None
     viewer_view: Optional[ViewerDashboard] = None
+

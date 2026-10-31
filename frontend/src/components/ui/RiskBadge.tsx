@@ -68,3 +68,4 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({
     </span>
   );
 };
+
