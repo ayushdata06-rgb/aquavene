@@ -14,6 +14,7 @@ import {
   fetchLiveElevation,
   fetchLiveRainfall,
   calculatePhysicalHydrology,
+  generateLiveHydrologyLayers,
 } from '../api/liveGeoService';
 
 export interface FourPointMarker {
@@ -50,6 +51,9 @@ interface ResearchContextType {
   removePoint: (id: number) => void;
   removeLastFourPoint: () => void;
   clearFourPoints: () => void;
+  removeIntervention: (id: string) => void;
+  updateInterventionCoord: (id: string, lat: number, lon: number) => void;
+  removeBarrier: (id: string) => void;
   analyzeFourPointsAOI: (pts?: FourPointMarker[], customName?: string) => Promise<ActiveArea>;
   selectWatershed: (ws: Watershed | PriorityScore) => Promise<void>;
   loadSampleArea: () => void;
@@ -87,7 +91,15 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [activeArea, setActiveAreaState] = useState<ActiveArea | null>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_ACTIVE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Evict old stale mock caches that hardcoded 76.8 / 17.8
+        if (parsed?.code === 'SAMPLE-KALI-001' || (parsed?.score === 76.8 && parsed?.slope_deg === 17.8)) {
+          localStorage.removeItem(STORAGE_ACTIVE_KEY);
+          return null;
+        }
+        return parsed;
+      }
     } catch {}
     return null;
   });
@@ -213,8 +225,8 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addFourPoint = (lat: number, lon: number) => {
     let current = fourPoints;
     if (current.length >= 4) {
-      // If 4 corners already placed, clicking starts a clean new boundary
-      current = [];
+      // 4 corners already placed; keep intact until explicitly cleared
+      return;
     }
     const labels = ['P1 (NW)', 'P2 (NE)', 'P3 (SE)', 'P4 (SW)'];
     const nextIdx = current.length;
@@ -261,6 +273,44 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const clearFourPoints = () => {
     setFourPoints([]);
+    setActiveAreaState(null);
+    try {
+      localStorage.removeItem(STORAGE_ACTIVE_KEY);
+    } catch {}
+  };
+
+  const removeIntervention = (id: string) => {
+    if (!activeArea) return;
+    const updatedWorks = (activeArea.prescribed_interventions || []).filter((w) => (w.id || w.title) !== id);
+    const updated = { ...activeArea, prescribed_interventions: updatedWorks };
+    setActiveAreaState(updated);
+  };
+
+  const updateInterventionCoord = (id: string, lat: number, lon: number) => {
+    if (!activeArea) return;
+    const updatedWorks = (activeArea.prescribed_interventions || []).map((w) =>
+      (w.id || w.title) === id ? { ...w, coordinates: [lat, lon] as [number, number] } : w
+    );
+    const updated = { ...activeArea, prescribed_interventions: updatedWorks };
+    setActiveAreaState(updated);
+  };
+
+  const removeBarrier = (id: string) => {
+    if (!activeArea?.hydrology_network?.barriers) return;
+    const feats = activeArea.hydrology_network.barriers.features.filter(
+      (f: any) => f.properties.id !== id && f.properties.barrier_id !== id
+    );
+    const updated = {
+      ...activeArea,
+      hydrology_network: {
+        ...activeArea.hydrology_network,
+        barriers: {
+          ...activeArea.hydrology_network.barriers,
+          features: feats,
+        },
+      },
+    };
+    setActiveAreaState(updated);
   };
 
   /**
@@ -302,16 +352,69 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         liveLoc.river_basin.split(' ')[0],
       ]);
 
-      // Physical SCS-CN & USLE calculation
+      // Physical SCS-CN & USLE calculation with REAL observed daily precipitation from Open-Meteo
       const hydro = calculatePhysicalHydrology({
         areaSqKm: calculatedAreaSqKm,
         slopeDeg: liveElev.mean_slope_deg,
         rainfall30dMm: liveRain.rainfall_30d_mm,
         monsoonP95: liveRain.monsoon_storm_p95,
         reliefM: liveElev.relief_m,
+        dailySeries: liveRain.daily_series,
       });
 
-      // Also call backend /api/predict/aoi if reachable
+      // Coordinates strictly inside the user's polygon
+      const midLat = (minLat + maxLat) / 2;
+      const midLon = (minLon + maxLon) / 2;
+      const dLat = maxLat - minLat;
+      const dLon = maxLon - minLon;
+
+      const liveHydroLayers = generateLiveHydrologyLayers(
+        [minLon, minLat, maxLon, maxLat],
+        liveElev.mean_slope_deg,
+        liveElev.max_elevation_m,
+        liveElev.min_elevation_m
+      );
+
+      const prescribedInterventions = [
+        {
+          title: 'Cascading Stone Check Dams',
+          type: 'check_dams',
+          quantity: `${Math.max(2, Math.round(calculatedAreaSqKm * 0.15))} cascading stone structures`,
+          target_zone: 'Gully incisions & stream confluence',
+          estimated_cost_lakhs_inr: Math.round(calculatedAreaSqKm * 0.15 * 2.8 * 10) / 10,
+          impact: 'Intercepts steep gully runoff and arrests reservoir topsoil sedimentation.',
+          coordinates: [midLat + dLat * 0.12, midLon - dLon * 0.1] as [number, number],
+        },
+        {
+          title: 'Continuous Contour Trenches (CCT)',
+          type: 'contour_trenching',
+          quantity: `${Math.round(calculatedAreaSqKm * 0.8 * 10) / 10} km ridge contouring`,
+          target_zone: 'Hillside slopes > 12°',
+          estimated_cost_lakhs_inr: Math.round(calculatedAreaSqKm * 0.8 * 1.6 * 10) / 10,
+          impact: 'Breaks slope velocity along ridge crests to replenish groundwater aquifers.',
+          coordinates: [midLat - dLat * 0.1, midLon + dLon * 0.15] as [number, number],
+        },
+        {
+          title: 'Indigenous Riparian Afforestation',
+          type: 'afforestation',
+          quantity: `${Math.round(calculatedAreaSqKm * 0.25 * 100)} hectares native tree canopy`,
+          target_zone: 'Stream riparian buffers (20m setback)',
+          estimated_cost_lakhs_inr: Math.round(calculatedAreaSqKm * 0.25 * 100 * 0.45 * 10) / 10,
+          impact: 'Establishes 3-tier deep-root vegetative bio-shield against bank erosion.',
+          coordinates: [midLat, midLon] as [number, number],
+        },
+        {
+          title: 'Community Percolation Tanks',
+          type: 'farm_ponds',
+          quantity: `${Math.max(1, Math.round(calculatedAreaSqKm * 0.08))} recharge ponds`,
+          target_zone: 'Mid-slope agricultural depressions',
+          estimated_cost_lakhs_inr: Math.round(calculatedAreaSqKm * 0.08 * 3.5 * 10) / 10,
+          impact: 'Provides critical lifesaving irrigation and buffers downstream storm deluge.',
+          coordinates: [minLat + dLat * 0.25, minLon + dLon * 0.35] as [number, number],
+        },
+      ];
+
+      // Also call backend /api/predict/aoi for background processing job record
       let backendRes: any = null;
       try {
         const coordinates = [
@@ -323,20 +426,21 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ];
         backendRes = await api.predictAOI({ type: 'Polygon', coordinates: [coordinates] }, customName || liveLoc.display_name);
       } catch (err) {
-        console.warn('Backend predict AOI delayed or unreachable, using live client stream:', err);
+        console.warn('Backend predict AOI delayed, utilizing real live client telemetry:', err);
       }
 
-      const score = backendRes?.score || hydro.compositeScore;
+      // Live metrics are ground truth
+      const score = hydro.compositeScore;
       const category: PriorityCategory = score >= 75 ? 'Critical' : score >= 60 ? 'High' : score >= 40 ? 'Moderate' : 'Low';
-      const soilLoss = backendRes?.soil_loss_t_ha_yr || hydro.soilLossTonneHaYr;
-      const finalHydrograph = backendRes?.hydrograph || hydro.hydrograph;
+      const soilLoss = hydro.soilLossTonneHaYr;
+      const finalHydrograph = hydro.hydrograph;
 
       const riskyDaysCount = finalHydrograph.filter((h: any) => h.discharge_m3s > (h.flood_alert_threshold || 15.0)).length;
       const peakDay = finalHydrograph.reduce((max: any, h: any) => (h.discharge_m3s > max.discharge_m3s ? h : max), finalHydrograph[0]);
 
       const newArea: ActiveArea = {
         id: `aoi-${Date.now()}`,
-        name: customName || backendRes?.name || liveLoc.display_name,
+        name: customName || liveLoc.display_name,
         code: 'LIVE-AOI-4PT',
         district: liveLoc.district,
         state: liveLoc.state,
@@ -344,8 +448,8 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         score,
         category,
         soil_loss_t_ha_yr: soilLoss,
-        bare_soil_pct: backendRes?.features?.bare_soil_pct || Math.round((20.0 + (liveElev.mean_slope_deg / 40.0) * 20.0) * 10) / 10,
-        plant_cover_pct: backendRes?.features?.tree_cover_pct || Math.round((70.0 - (liveElev.mean_slope_deg / 40.0) * 25.0) * 10) / 10,
+        bare_soil_pct: Math.min(65, Math.max(15, Math.round((20.0 + (liveElev.mean_slope_deg / 40.0) * 25.0) * 10) / 10)),
+        plant_cover_pct: Math.max(15, Math.round((75.0 - (liveElev.mean_slope_deg / 40.0) * 30.0) * 10) / 10),
         relief_m: liveElev.relief_m,
         slope_deg: liveElev.mean_slope_deg,
         rainfall_30d_mm: liveRain.rainfall_30d_mm,
@@ -358,31 +462,16 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         coordinates: pointsToUse.map((p) => [p.lat, p.lon]),
         fourPoints: pointsToUse,
         hydrograph: finalHydrograph,
-        peak_discharge_m3s: backendRes?.peak_discharge_m3s || hydro.peakDischargeM3s,
+        peak_discharge_m3s: hydro.peakDischargeM3s,
         flood_alert_days: riskyDaysCount,
         most_risky_day: peakDay ? peakDay.day : 'Day 17',
-        prescribed_interventions: backendRes?.prescribed_interventions || [
-          {
-            title: 'Cascading Gabion Check Dams',
-            quantity: `${Math.max(2, Math.round(calculatedAreaSqKm * 0.15))} structures`,
-            estimated_cost_lakhs_inr: Math.round(calculatedAreaSqKm * 0.15 * 2.8 * 10) / 10,
-          },
-          {
-            title: 'Continuous Contour Trenches (CCT)',
-            quantity: `${Math.round(calculatedAreaSqKm * 0.8 * 10) / 10} km`,
-            estimated_cost_lakhs_inr: Math.round(calculatedAreaSqKm * 0.8 * 1.6 * 10) / 10,
-          },
-          {
-            title: 'Indigenous Riparian Afforestation',
-            quantity: `${Math.round(calculatedAreaSqKm * 0.25 * 100)} hectares`,
-            estimated_cost_lakhs_inr: Math.round(calculatedAreaSqKm * 0.25 * 100 * 0.45 * 10) / 10,
-          },
-        ],
-        estimated_budget_lakhs_inr: backendRes?.estimated_budget_lakhs_inr || Math.round(calculatedAreaSqKm * 3.2 * 10) / 10,
-        shap_drivers: backendRes?.shap_drivers || [
-          { feature_key: 'mean_slope_deg', label: 'Terrain Slope Angle', description: `${liveElev.mean_slope_deg}° mean slope angle`, impact_pts: 14.2, is_aggravating: true },
-          { feature_key: 'rainfall_30d_mm', label: '30-Day Precipitation', description: `${liveRain.rainfall_30d_mm} mm observed Open-Meteo rainfall`, impact_pts: 12.8, is_aggravating: true },
-          { feature_key: 'soil_loss', label: 'USLE Topsoil Silt Bleed', description: `${soilLoss} t/ha/yr erosion potential`, impact_pts: 11.5, is_aggravating: true },
+        prescribed_interventions: prescribedInterventions,
+        estimated_budget_lakhs_inr: Math.round(calculatedAreaSqKm * 3.2 * 10) / 10,
+        shap_drivers: [
+          { feature_key: 'mean_slope_deg', label: 'Terrain Slope Angle', description: `${liveElev.mean_slope_deg}° mean slope angle`, impact_pts: Math.round(liveElev.mean_slope_deg * 0.85 * 10) / 10, is_aggravating: true },
+          { feature_key: 'rainfall_30d_mm', label: '30-Day Precipitation', description: `${liveRain.rainfall_30d_mm} mm observed Open-Meteo rainfall`, impact_pts: Math.round((liveRain.rainfall_30d_mm / 25.0) * 10) / 10, is_aggravating: true },
+          { feature_key: 'soil_loss', label: 'USLE Topsoil Silt Bleed', description: `${soilLoss} t/ha/yr erosion potential`, impact_pts: Math.round(soilLoss * 0.6 * 10) / 10, is_aggravating: true },
+          { feature_key: 'drainage_density', label: 'Drainage Gully Network', description: `${Math.round((0.8 + liveElev.mean_slope_deg * 0.08) * 100) / 100} km/km² drainage density`, impact_pts: 4.5, is_aggravating: true },
         ],
         location: liveLoc,
         history: {
@@ -427,16 +516,7 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             },
           ],
         },
-        hydrology_network: backendRes?.hydrology_network || {
-          streams: [],
-          flow_vectors: [],
-          barriers: [],
-          elevation_profile: [
-            { distance_km: 0, elevation_m: liveElev.max_elevation_m },
-            { distance_km: Math.round(Math.sqrt(calculatedAreaSqKm) * 0.5 * 10) / 10, elevation_m: Math.round((liveElev.max_elevation_m + liveElev.min_elevation_m) / 2) },
-            { distance_km: Math.round(Math.sqrt(calculatedAreaSqKm) * 10) / 10, elevation_m: liveElev.min_elevation_m },
-          ],
-        },
+        hydrology_network: (backendRes?.hydrology_network?.streams?.features?.length) ? backendRes.hydrology_network : liveHydroLayers,
         restoration_plan: backendRes?.restoration_plan || {
           summary: {
             area_name: customName || liveLoc.display_name,
@@ -616,6 +696,9 @@ export const ResearchProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         removePoint,
         removeLastFourPoint,
         clearFourPoints,
+        removeIntervention,
+        updateInterventionCoord,
+        removeBarrier,
         analyzeFourPointsAOI,
         selectWatershed,
         loadSampleArea,

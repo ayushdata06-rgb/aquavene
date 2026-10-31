@@ -16,17 +16,29 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
+import { LockedTabBanner } from '../components/LockedTabBanner';
 
 export const ReforestationTab: React.FC = () => {
   const navigate = useNavigate();
   const { activeArea, sliderValues, setSliderValues } = useResearch();
 
   const [bufferWidthMeters, setBufferWidthMeters] = useState<number>(20);
-  const p1 = activeArea?.restoration_plan?.pillar1_reforestation;
+
+  if (!activeArea) {
+    return (
+      <LockedTabBanner
+        stepNumber={4}
+        stepName="Pillar 1: Native Vegetation & Riparian Buffers"
+        whatItShows="Draw an AOI on the map or select a micro-watershed to compute site-specific native species mixes, sapling densities, and sediment trapping efficiency."
+      />
+    );
+  }
+
+  const p1 = activeArea.restoration_plan?.pillar1_reforestation;
 
   // Real-time calculations based on slider
   const reforestPct = sliderValues.reforest_pct;
-  const areaHa = Math.round(((activeArea?.area_sq_km || 42.5) * (reforestPct / 100) * 8.0) * 10) / 10;
+  const areaHa = Math.round((activeArea.area_sq_km * (reforestPct / 100) * 8.0) * 10) / 10;
   const saplingsCount = Math.round(areaHa * 800);
   const sedimentFilteredPct = Math.min(92, Math.round(35 + bufferWidthMeters * 1.6 + reforestPct * 0.22));
   const tempCoolingDegC = (1.2 + (bufferWidthMeters / 14.0)).toFixed(1);

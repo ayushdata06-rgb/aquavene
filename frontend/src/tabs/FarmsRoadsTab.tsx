@@ -14,21 +14,32 @@ import {
   Droplets,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
+import { LockedTabBanner } from '../components/LockedTabBanner';
 
 export const FarmsRoadsTab: React.FC = () => {
   const navigate = useNavigate();
   const { activeArea, sliderValues, setSliderValues } = useResearch();
 
-  const p4 = activeArea?.restoration_plan?.pillar4_erosion_roads;
-  const p5 = activeArea?.restoration_plan?.pillar5_regenerative_farming;
+  if (!activeArea) {
+    return (
+      <LockedTabBanner
+        stepNumber={6}
+        stepName="Pillars 4 & 5: Dirt Roads & Better Land Management"
+        whatItShows="Draw an AOI on the map or select a micro-watershed to compute dirt road sediment delivery, rolling dip water bars, and farm pond percolation volumes."
+      />
+    );
+  }
+
+  const p4 = activeArea.restoration_plan?.pillar4_erosion_roads;
+  const p5 = activeArea.restoration_plan?.pillar5_regenerative_farming;
 
   const roadKm = sliderValues.road_stabilize_km || 3.0;
   const coverCropPct = sliderValues.cover_crop_pct || 35;
 
   // Real-time calculations
   const waterBarsCount = Math.round(roadKm * 6);
-  const enrolledHa = Math.round(((activeArea?.area_sq_km || 42.5) * 0.38 * (coverCropPct / 100) * 15.0) * 10) / 10;
-  const pondsCount = Math.max(1, Math.min(8, Math.round((activeArea?.area_sq_km || 42.5) * 0.12)));
+  const enrolledHa = Math.round((activeArea.area_sq_km * 0.38 * (coverCropPct / 100) * 15.0) * 10) / 10;
+  const pondsCount = Math.max(1, Math.min(8, Math.round(activeArea.area_sq_km * 0.12)));
   const pondStorageCapacityM3 = pondsCount * 3500;
   const sedimentArrestedTonnes = Math.round(roadKm * 280 + enrolledHa * 18);
   const totalCostLakhs = Math.round((roadKm * 1.10 + enrolledHa * 0.12 + pondsCount * 2.20) * 10) / 10;

@@ -18,13 +18,24 @@ import {
   Mountain,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
+import { LockedTabBanner } from '../components/LockedTabBanner';
 
 export const HistoryTab: React.FC = () => {
   const navigate = useNavigate();
   const { activeArea } = useResearch();
 
-  const history = activeArea?.history;
-  const location = activeArea?.location;
+  if (!activeArea) {
+    return (
+      <LockedTabBanner
+        stepNumber={2}
+        stepName="Catchment History & Regional Water Memory"
+        whatItShows="Draw an AOI on the map or select a micro-watershed to query live Wikipedia water archives, sub-basin telemetry, and historical climate chronologies."
+      />
+    );
+  }
+
+  const history = activeArea.history;
+  const location = activeArea.location;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
@@ -52,7 +63,7 @@ export const HistoryTab: React.FC = () => {
               </span>
               <span>•</span>
               <span className="text-slate-400">
-                {activeArea?.area_sq_km || 42.5} km² ({Math.round((activeArea?.area_sq_km || 42.5) * 100)} Hectares)
+                {activeArea.area_sq_km} km² ({Math.round(activeArea.area_sq_km * 100)} Hectares)
               </span>
             </p>
           </div>
@@ -78,11 +89,11 @@ export const HistoryTab: React.FC = () => {
           <div>
             <div className="text-xs text-slate-400 uppercase font-semibold">30-Day Precipitation</div>
             <div className="text-xl font-bold text-white mt-0.5">
-              {activeArea?.rainfall_30d_mm || 360.0} mm
+              {activeArea.rainfall_30d_mm} mm
             </div>
             <div className="text-xs text-sky-300 mt-1 font-medium">
-              {activeArea?.rainfall_anomaly_pct && activeArea.rainfall_anomaly_pct > 0 ? '+' : ''}
-              {activeArea?.rainfall_anomaly_pct || 42}% vs 30-yr baseline
+              {(activeArea.rainfall_anomaly_pct ?? 0) > 0 ? '+' : ''}
+              {activeArea.rainfall_anomaly_pct ?? 0}% vs 30-yr baseline
             </div>
           </div>
         </div>
@@ -94,7 +105,7 @@ export const HistoryTab: React.FC = () => {
           <div>
             <div className="text-xs text-slate-400 uppercase font-semibold">Monsoon Storm Peak (P95)</div>
             <div className="text-xl font-bold text-white mt-0.5">
-              {activeArea?.monsoon_storm_p95 || 92.0} mm/day
+              {activeArea.monsoon_storm_p95 ?? Math.round(activeArea.rainfall_30d_mm * 0.28 * 10) / 10} mm/day
             </div>
             <div className="text-xs text-amber-300 mt-1">High-velocity sheetwash risk</div>
           </div>

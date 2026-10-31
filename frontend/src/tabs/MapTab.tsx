@@ -59,6 +59,9 @@ export const MapTab: React.FC = () => {
     removePoint,
     removeLastFourPoint,
     clearFourPoints,
+    removeIntervention,
+    updateInterventionCoord,
+    removeBarrier,
     analyzeFourPointsAOI,
     selectWatershed,
     loadPresetCatchment,
@@ -117,7 +120,17 @@ export const MapTab: React.FC = () => {
   const nextCornerHint =
     fourPoints.length < 4
       ? `Click corner ${fourPoints.length + 1} of 4 (${cornerNames[fourPoints.length]}) on the map.`
-      : 'All 4 corners placed! Click "Analyze Catchment" to stream live terrain and history.';
+      : 'All 4 corners placed! Drag any corner to reshape, or click "Analyze Catchment".';
+
+  const fourPointsRef = useRef(fourPoints);
+  useEffect(() => {
+    fourPointsRef.current = fourPoints;
+  }, [fourPoints]);
+
+  const isDrawModeRef = useRef(isDrawMode);
+  useEffect(() => {
+    isDrawModeRef.current = isDrawMode;
+  }, [isDrawMode]);
 
   // Initialize Native Leaflet Canvas
   useEffect(() => {
@@ -165,6 +178,10 @@ export const MapTab: React.FC = () => {
 
     // Map Click Handler for 4-Point Drawing
     map.on('click', (e: L.LeafletMouseEvent) => {
+      if (fourPointsRef.current.length >= 4) {
+        // Boundary is already complete; ignore random map clicks to prevent accidental wipes
+        return;
+      }
       addFourPoint(e.latlng.lat, e.latlng.lng);
     });
 
@@ -240,6 +257,13 @@ export const MapTab: React.FC = () => {
       const marker = L.marker([pt.lat, pt.lon], {
         icon: customIcon,
         draggable: true,
+      });
+
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+      });
+      marker.on('mousedown', (e) => {
+        L.DomEvent.stopPropagation(e);
       });
 
       // Live smooth polygon boundary re-shaping while dragging
@@ -452,12 +476,16 @@ export const MapTab: React.FC = () => {
         });
 
         const marker = L.marker([b.geometry.coordinates[1], b.geometry.coordinates[0]], { icon });
-        marker.on('click', () => {
+        marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
           setSelectedFeature({
             category: 'barrier',
             title: b.properties.title,
             properties: b.properties,
           });
+        });
+        marker.on('mousedown', (e) => {
+          L.DomEvent.stopPropagation(e);
         });
         marker.bindTooltip(`
           <div class="p-1 text-xs">
@@ -514,6 +542,9 @@ export const MapTab: React.FC = () => {
 
     if (showWorks && activeArea?.prescribed_interventions) {
       activeArea.prescribed_interventions.forEach((work) => {
+        if (!work.coordinates) return;
+        const workId = work.id || work.title;
+
         let iconHtml = '🧱';
         let iconBg = 'bg-amber-600';
 
@@ -540,14 +571,56 @@ export const MapTab: React.FC = () => {
           iconSize: [28, 28],
         });
 
-        const pin = L.marker(work.coordinates, { icon });
-        pin.bindPopup(`
-          <div class="p-1.5 space-y-1 text-xs">
-            <strong class="text-white block">${work.title}</strong>
-            <p class="text-slate-300">${work.quantity} • ₹${work.estimated_cost_lakhs_inr} Lakhs</p>
-            <p class="text-slate-400 text-[11px]">${work.impact}</p>
+        const pin = L.marker(work.coordinates, {
+          icon,
+          draggable: true,
+        });
+
+        pin.on('dragend', (e) => {
+          const newPos = e.target.getLatLng();
+          updateInterventionCoord(workId, newPos.lat, newPos.lng);
+        });
+
+        pin.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setSelectedFeature({
+            category: 'barrier' as any,
+            title: work.title,
+            properties: {
+              ...work,
+              id: workId,
+              isIntervention: true,
+            },
+          });
+        });
+        pin.on('mousedown', (e) => {
+          L.DomEvent.stopPropagation(e);
+        });
+
+        const workPopupDiv = document.createElement('div');
+        workPopupDiv.className = 'p-2 space-y-1.5 text-xs font-sans text-slate-200';
+        workPopupDiv.innerHTML = `
+          <strong class="text-white block font-bold">${work.title}</strong>
+          <p class="text-slate-300 text-[11px]">${work.quantity} • ₹${work.estimated_cost_lakhs_inr} Lakhs</p>
+          <p class="text-slate-400 text-[11px] leading-tight">${work.impact}</p>
+          <div class="pt-2 flex items-center justify-between gap-2 border-t border-slate-700">
+            <span class="text-[10px] text-cyan-400">Drag to reposition</span>
+            <button id="del-work-${workId}" class="px-2 py-0.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-[10px] font-bold cursor-pointer transition-colors">
+              ✕ Remove
+            </button>
           </div>
-        `);
+        `;
+        pin.bindPopup(workPopupDiv);
+        pin.on('popupopen', () => {
+          const delBtn = document.getElementById(`del-work-${workId}`);
+          if (delBtn) {
+            delBtn.onclick = (e) => {
+              e.stopPropagation();
+              pin.closePopup();
+              removeIntervention(workId);
+            };
+          }
+        });
 
         worksMarkersRef.current?.addLayer(pin);
       });
@@ -679,23 +752,26 @@ export const MapTab: React.FC = () => {
             <span>{isDrawMode ? 'Drawing 4 Corners...' : 'Draw 4-Corner Area'}</span>
           </button>
 
-          {/* Undo Point / Clear */}
-          {fourPoints.length > 0 && (
+          {/* Undo Point / Clear All Drawn Elements */}
+          {(fourPoints.length > 0 || activeArea !== null) && (
             <div className="flex items-center space-x-1 bg-slate-900/95 border border-slate-700 rounded-xl p-1 shadow-xl">
-              <button
-                onClick={removeLastFourPoint}
-                className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 text-xs flex items-center gap-1"
-                title="Undo last placed corner point"
-              >
-                <Undo2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline text-[11px]">Undo</span>
-              </button>
+              {fourPoints.length > 0 && (
+                <button
+                  onClick={removeLastFourPoint}
+                  className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 text-xs flex items-center gap-1"
+                  title="Undo last placed corner point"
+                >
+                  <Undo2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-[11px]">Undo Corner</span>
+                </button>
+              )}
               <button
                 onClick={clearFourPoints}
-                className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-slate-800 text-xs"
-                title="Reset points"
+                className="px-2 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-xs font-semibold flex items-center gap-1 border border-rose-500/20 transition-colors"
+                title="Reset active catchment, drawn boundary, and marked works"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
+                <span className="text-[11px]">Clear All</span>
               </button>
             </div>
           )}
@@ -989,9 +1065,33 @@ export const MapTab: React.FC = () => {
               </div>
               <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
                 <span className="text-slate-400 block text-[10px] uppercase font-semibold">Recommended Intervention</span>
-                <p className="text-emerald-400 font-bold">{selectedFeature.properties.action}</p>
-                <p className="text-slate-300 text-[11px]">{selectedFeature.properties.fish_impact}</p>
+                <p className="text-emerald-400 font-bold">{selectedFeature.properties.action || selectedFeature.properties.title}</p>
+                <p className="text-slate-300 text-[11px]">{selectedFeature.properties.fish_impact || selectedFeature.properties.impact}</p>
               </div>
+
+              {selectedFeature.properties.isIntervention ? (
+                <button
+                  onClick={() => {
+                    removeIntervention(selectedFeature.properties.id);
+                    setSelectedFeature(null);
+                  }}
+                  className="w-full py-1.5 px-3 rounded-xl bg-rose-600/90 hover:bg-rose-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-lg shadow-rose-600/20"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Remove This Intervention</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    removeBarrier(selectedFeature.properties.id || selectedFeature.properties.barrier_id);
+                    setSelectedFeature(null);
+                  }}
+                  className="w-full py-1.5 px-3 rounded-xl bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-lg shadow-emerald-600/20"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Decommission & Remove Barrier</span>
+                </button>
+              )}
             </div>
           )}
 

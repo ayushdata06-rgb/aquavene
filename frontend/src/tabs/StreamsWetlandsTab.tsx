@@ -17,6 +17,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
+import { LockedTabBanner } from '../components/LockedTabBanner';
 
 export const StreamsWetlandsTab: React.FC = () => {
   const navigate = useNavigate();
@@ -25,8 +26,18 @@ export const StreamsWetlandsTab: React.FC = () => {
   const [floodplainSetbackMeters, setFloodplainSetbackMeters] = useState<number>(30);
   const [crossSectionView, setCrossSectionView] = useState<'restored' | 'degraded'>('restored');
 
-  const p2 = activeArea?.restoration_plan?.pillar2_stream_wetland;
-  const p3 = activeArea?.restoration_plan?.pillar3_barriers_fish;
+  if (!activeArea) {
+    return (
+      <LockedTabBanner
+        stepNumber={5}
+        stepName="Pillars 2 & 3: Streams, Wetlands & Fish Migration"
+        whatItShows="Draw an AOI on the map or select a micro-watershed to model channel reconnection, large woody debris structures, and culvert fishway retrofits."
+      />
+    );
+  }
+
+  const p2 = activeArea.restoration_plan?.pillar2_stream_wetland;
+  const p3 = activeArea.restoration_plan?.pillar3_barriers_fish;
 
   const streamRepairKm = sliderValues.stream_repair_km || 4.5;
   const barriersRemoved = sliderValues.barriers_removed || 2;

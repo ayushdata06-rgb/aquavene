@@ -21,6 +21,7 @@ import {
 import { useResearch } from '../context/ResearchContext';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../api/client';
+import { LockedTabBanner } from '../components/LockedTabBanner';
 
 export const PlanBudgetTab: React.FC = () => {
   const navigate = useNavigate();
@@ -31,7 +32,17 @@ export const PlanBudgetTab: React.FC = () => {
   const [isSavingPlan, setIsSavingPlan] = useState(false);
   const [dprSaveNotice, setDprSaveNotice] = useState<string | null>(null);
 
-  const plan = activeArea?.restoration_plan;
+  if (!activeArea) {
+    return (
+      <LockedTabBanner
+        stepNumber={8}
+        stepName="Tab 8: Detailed Project Report (DPR) & Budget"
+        whatItShows="Draw an AOI on the map or select a micro-watershed to generate the 5-pillar Schedule of Rates (SoR), Bill of Quantities (BoQ), and multi-year funding allocation."
+      />
+    );
+  }
+
+  const plan = activeArea.restoration_plan;
   const boq = plan?.bill_of_quantities || [
     { item_code: 'SOR-P1-01', description: 'Ridge Afforestation & Native Tree Planting (800 saplings/ha)', quantity: '34.0 ha', unit_rate_lakhs: 0.65, total_cost_lakhs: 22.1 },
     { item_code: 'SOR-P1-02', description: 'Vetiver Grass Riparian Buffer Strip along Stream Banks', quantity: '25.5 km', unit_rate_lakhs: 0.45, total_cost_lakhs: 11.48 },

@@ -257,6 +257,7 @@ export interface HydrographPoint {
 }
 
 export interface PrescribedIntervention {
+  id?: string;
   title: string;
   type?: string;
   category?: string;

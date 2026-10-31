@@ -14,6 +14,7 @@ import { PlanBudgetTab } from './tabs/PlanBudgetTab';
 import { AdminTab } from './tabs/AdminTab';
 import { RankingsTab } from './tabs/RankingsTab';
 import { HydrologyTab } from './tabs/HydrologyTab';
+import { AuthTab } from './tabs/AuthTab';
 
 export function App() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -26,6 +27,7 @@ export function App() {
             <Route element={<Layout />}>
               <Route path="/" element={<Navigate to="/map" replace />} />
               <Route path="/map" element={<MapTab key={`map-${refreshKey}`} />} />
+              <Route path="/auth" element={<AuthTab key={`auth-${refreshKey}`} />} />
               <Route path="/history" element={<HistoryTab key={`history-${refreshKey}`} />} />
               <Route path="/terrain" element={<TerrainHealthTab key={`terrain-${refreshKey}`} />} />
               <Route path="/reforest" element={<ReforestationTab key={`reforest-${refreshKey}`} />} />

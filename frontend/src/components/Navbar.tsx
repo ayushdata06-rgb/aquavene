@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Waves,
   ChevronDown,
@@ -11,6 +12,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useResearch } from '../context/ResearchContext';
@@ -19,6 +21,7 @@ import { apiClient } from '../api/client';
 import { DataResolutionModal } from './DataResolutionModal';
 
 export const Navbar: React.FC = () => {
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { activeArea } = useResearch();
 
@@ -136,11 +139,13 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Role Badge */}
-          <span
-            className={`text-[11px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-full border ${roleStyles}`}
+          <button
+            onClick={() => navigate('/auth')}
+            className={`text-[11px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-full border hover:scale-105 transition-all cursor-pointer ${roleStyles}`}
+            title="Click to view and switch user role in Auth Hub"
           >
             {user?.role || 'viewer'}
-          </span>
+          </button>
 
           {/* User Avatar & Dropdown */}
           <div className="relative" ref={dropdownRef}>
@@ -174,13 +179,12 @@ export const Navbar: React.FC = () => {
                 <div className="py-1">
                   <button
                     onClick={() => {
-                      setModalTab('quick');
-                      setIsModalOpen(true);
                       setIsDropdownOpen(false);
+                      navigate('/auth');
                     }}
                     className="w-full text-left px-3 py-2 hover:bg-hydro-panel flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
                   >
-                    <Shield className="w-4 h-4 text-aqua-400" /> Switch Role / Persona
+                    <UserCheck className="w-4 h-4 text-cyan-400" /> Role & Onboarding Hub
                   </button>
                   <button
                     onClick={() => {
@@ -190,7 +194,7 @@ export const Navbar: React.FC = () => {
                     }}
                     className="w-full text-left px-3 py-2 hover:bg-hydro-panel flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
                   >
-                    <Sparkles className="w-4 h-4 text-amber-400" /> RBAC Permissions Matrix
+                    <Sparkles className="w-4 h-4 text-amber-400" /> Quick Permissions Dialog
                   </button>
                 </div>
 

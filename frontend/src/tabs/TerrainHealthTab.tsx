@@ -32,6 +32,7 @@ import {
 } from 'recharts';
 import { useResearch } from '../context/ResearchContext';
 import { SiteDiagnosticModal } from '../components/SiteDiagnosticModal';
+import { LockedTabBanner } from '../components/LockedTabBanner';
 
 export const TerrainHealthTab: React.FC = () => {
   const navigate = useNavigate();
@@ -40,7 +41,17 @@ export const TerrainHealthTab: React.FC = () => {
   const [activeProfileMode, setActiveProfileMode] = useState<'elevation' | 'velocity'>('elevation');
   const [showDiagnosticModal, setShowDiagnosticModal] = useState<boolean>(false);
 
-  const f = activeArea ? {
+  if (!activeArea) {
+    return (
+      <LockedTabBanner
+        stepNumber={3}
+        stepName="Terrain, Slopes & Watershed Health"
+        whatItShows="Draw an AOI on the map or select a micro-watershed to compute real 30m SRTM slope angles, USLE soil loss, and stream longitudinal profiles."
+      />
+    );
+  }
+
+  const f = {
     relief_m: activeArea.relief_m,
     slope_deg: activeArea.slope_deg,
     bare_soil_pct: activeArea.bare_soil_pct,
@@ -52,18 +63,6 @@ export const TerrainHealthTab: React.FC = () => {
     soil_loss_t_ha_yr: activeArea.soil_loss_t_ha_yr,
     score: activeArea.score,
     category: activeArea.category,
-  } : {
-    relief_m: 540.0,
-    slope_deg: 17.8,
-    bare_soil_pct: 34.5,
-    plant_cover_pct: 65.5,
-    rainfall_30d_mm: 360.0,
-    rainfall_anomaly_pct: 42.0,
-    monsoon_storm_p95: 92.0,
-    drainage_density: 2.15,
-    soil_loss_t_ha_yr: 32.4,
-    score: 76.8,
-    category: 'Critical',
   };
 
   const hydrograph = activeArea?.hydrograph || [];

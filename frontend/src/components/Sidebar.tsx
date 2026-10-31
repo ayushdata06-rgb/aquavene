@@ -13,6 +13,7 @@ import {
   Lock,
   CheckCircle2,
   BarChart3,
+  UserCheck,
 } from 'lucide-react';
 import { useResearch } from '../context/ResearchContext';
 import { useAuth } from '../context/AuthContext';
@@ -31,6 +32,13 @@ export const TABS = [
     name: 'Geospatial Map (AOI)',
     path: '/map',
     icon: MapPin,
+  },
+  {
+    step: -1,
+    id: 'auth',
+    name: 'Roles & Onboarding',
+    path: '/auth',
+    icon: UserCheck,
   },
   {
     step: 2,
@@ -98,7 +106,7 @@ export const Sidebar: React.FC = () => {
 
         {TABS.map((tab) => {
           const Icon = tab.icon;
-          const isLocked = !['rankings', 'map'].includes(tab.id) && !activeArea;
+          const isLocked = !['rankings', 'map', 'auth'].includes(tab.id) && !activeArea;
 
           return (
             <NavLink
@@ -164,24 +172,28 @@ export const Sidebar: React.FC = () => {
 
       {/* Sidebar Bottom: User & Role Quick Card */}
       <div className="p-3 border-t border-hydro-border/60 bg-hydro-surface/40">
-        <div className="p-2.5 rounded-xl bg-hydro-panel/80 border border-hydro-border flex items-center gap-2.5">
+        <NavLink
+          to="/auth"
+          className="p-2.5 rounded-xl bg-hydro-panel/80 hover:bg-hydro-panel border border-hydro-border hover:border-cyan-500/50 flex items-center gap-2.5 transition-all group"
+          title="Click to view and switch active user role"
+        >
           <img
             src={
               user?.avatar_url ||
               'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=faces'
             }
             alt="User"
-            className="w-8 h-8 rounded-full object-cover border border-white/20"
+            className="w-8 h-8 rounded-full object-cover border border-white/20 group-hover:scale-105 transition-transform"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-white truncate leading-tight">
+            <p className="text-xs font-bold text-white truncate leading-tight group-hover:text-cyan-300">
               {user?.display_name || user?.full_name || 'Dr. Aarav Sharma'}
             </p>
             <p className="text-[10px] font-mono text-aqua-400 uppercase tracking-wide truncate">
-              {user?.role || 'viewer'}
+              {user?.role || 'viewer'} • Onboard
             </p>
           </div>
-        </div>
+        </NavLink>
       </div>
     </aside>
   );
