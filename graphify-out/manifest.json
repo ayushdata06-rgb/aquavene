@@ -366,9 +366,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/client.ts": {
-    "mtime": 1793424214.3741896,
-    "seen": 1793425190.1127238,
-    "ast_hash": "acb66a576379cc91803d51bcd2761b48",
+    "mtime": 1793427389.434924,
+    "seen": 1793427517.9665542,
+    "ast_hash": "1899f2eab22d5e918704ef5077f7af68",
     "semantic_hash": ""
   },
   "frontend/src/components/ActiveAreaBar.tsx": {
@@ -396,8 +396,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/Navbar.tsx": {
-    "mtime": 1793425707.8870754,
-    "seen": 1793426085.620325,
+    "mtime": 1793426138.5740676,
+    "seen": 1793427517.967371,
     "ast_hash": "e12aa2ba8803678c9ca44d9a2a0c7e9a",
     "semantic_hash": ""
   },
@@ -414,15 +414,15 @@
     "semantic_hash": ""
   },
   "frontend/src/context/AuthContext.tsx": {
-    "mtime": 1793426026.0796452,
-    "seen": 1793426085.621878,
+    "mtime": 1793426138.831183,
+    "seen": 1793427517.969017,
     "ast_hash": "41dd8a3de287be385818cac941b19140",
     "semantic_hash": ""
   },
   "frontend/src/context/ResearchContext.tsx": {
-    "mtime": 1793425674.2192984,
-    "seen": 1793426085.621881,
-    "ast_hash": "d3f20d75acb2cd302d36d629333074a9",
+    "mtime": 1793427402.6383781,
+    "seen": 1793427517.9690192,
+    "ast_hash": "85abec2f0a88ac484dc8d4bcc62e05bd",
     "semantic_hash": ""
   },
   "frontend/src/lib/supabase.ts": {
@@ -444,15 +444,15 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/MapTab.tsx": {
-    "mtime": 1793425955.4431107,
-    "seen": 1793426085.6226144,
+    "mtime": 1793426139.231879,
+    "seen": 1793427517.9698765,
     "ast_hash": "be1f49f854af20aed5b617831dc1a5d6",
     "semantic_hash": ""
   },
   "frontend/src/tabs/RankingsTab.tsx": {
-    "mtime": 1793424213.9124987,
-    "seen": 1793425190.1148984,
-    "ast_hash": "f98e43ed57d864b1677c793bcaae845a",
+    "mtime": 1793427424.6430228,
+    "seen": 1793427517.9702106,
+    "ast_hash": "6b6b4f5be5a6063ed548bf81dd6d823c",
     "semantic_hash": ""
   },
   "frontend/src/tabs/SimulatorTab.tsx": {
@@ -636,9 +636,9 @@
     "semantic_hash": ""
   },
   "frontend/src/tabs/TerrainHealthTab.tsx": {
-    "mtime": 1793423859.0489626,
-    "seen": 1793424120.6990151,
-    "ast_hash": "36d3869496959ea4d8dad34719657c56",
+    "mtime": 1793427282.9340625,
+    "seen": 1793427517.9707208,
+    "ast_hash": "40a27db778f88ed6958364eebf7a0f86",
     "semantic_hash": ""
   },
   "backend/app/schemas/dashboard.py": {

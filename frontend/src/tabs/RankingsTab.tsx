@@ -30,7 +30,8 @@ export const RankingsTab: React.FC = () => {
   const navigate = useNavigate();
   const { activeArea, isAreaSelected, selectWatershed, setActiveStep } = useResearch();
 
-  const [rankings, setRankings] = useState<PriorityScore[]>(FIXTURE_RANKINGS);
+  const [rankings, setRankings] = useState<PriorityScore[]>([]);
+  const [isLoadingRankings, setIsLoadingRankings] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedState, setSelectedState] = useState<string>('all');
   const [selectedBasin, setSelectedBasin] = useState<string>('all');
@@ -44,14 +45,44 @@ export const RankingsTab: React.FC = () => {
 
   useEffect(() => {
     setActiveStep(0);
+    setIsLoadingRankings(true);
     api.getRankings().then((data) => {
-      if (data && data.length > 0) setRankings(data);
-    });
+      setRankings(data && data.length > 0 ? data : FIXTURE_RANKINGS);
+    }).finally(() => setIsLoadingRankings(false));
   }, []);
 
   // Filter options
   const states = useMemo(() => Array.from(new Set(rankings.map((r) => r.state))), [rankings]);
   const basins = useMemo(() => Array.from(new Set(rankings.map((r) => r.basin_name))), [rankings]);
+
+  // If activeArea is a live custom AOI, prepend it to the ranked list
+  const aoiEntry: PriorityScore | null = useMemo(() => {
+    if (!activeArea || !activeArea.isCustom) return null;
+    const erosionPct = Math.min(100, Math.round(activeArea.soil_loss_t_ha_yr * 2.2));
+    const runoffPct = Math.min(100, Math.round((activeArea.peak_discharge_m3s || 5) * 5));
+    const barepct = Math.min(100, activeArea.bare_soil_pct);
+    const rainPct = Math.min(100, Math.round(activeArea.rainfall_30d_mm / 4));
+    return {
+      id: activeArea.id,
+      watershed_id: activeArea.id,
+      watershed_code: activeArea.code || 'LIVE-AOI',
+      watershed_name: `🎯 ${activeArea.name}`,
+      state: activeArea.state,
+      district: activeArea.district,
+      basin_name: activeArea.location?.river_basin || 'Live AOI Basin',
+      rank_position: 0,
+      overall_score: activeArea.score,
+      priority_category: activeArea.category,
+      area_sq_km: activeArea.area_sq_km,
+      indicator_breakdown: {
+        erosion_potential: erosionPct,
+        runoff_potential: runoffPct,
+        landcover_degradation: barepct,
+        rainfall_pressure: rainPct,
+        downstream_exposure: 50,
+      },
+    } as unknown as PriorityScore;
+  }, [activeArea]);
 
   const hasActiveFilters = searchTerm !== '' || selectedState !== 'all' || selectedBasin !== 'all' || sortBy !== 'score';
 
@@ -100,16 +131,15 @@ export const RankingsTab: React.FC = () => {
   };
 
   const filteredAndSortedRankings = useMemo(() => {
-    return rankings
+    const base = [...rankings];
+    const filtered = base
       .filter((r) => {
         const matchesSearch =
           r.watershed_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           r.watershed_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
           r.district.toLowerCase().includes(searchTerm.toLowerCase());
-
         const matchesState = selectedState === 'all' || r.state === selectedState;
         const matchesBasin = selectedBasin === 'all' || r.basin_name === selectedBasin;
-
         return matchesSearch && matchesState && matchesBasin;
       })
       .sort((a, b) => {
@@ -119,7 +149,17 @@ export const RankingsTab: React.FC = () => {
         if (sortBy === 'bare') return (b.indicator_breakdown?.landcover_degradation || 0) - (a.indicator_breakdown?.landcover_degradation || 0);
         return 0;
       });
-  }, [rankings, searchTerm, selectedState, selectedBasin, sortBy]);
+    // Prepend live AOI entry at top if it matches filters
+    if (aoiEntry) {
+      const matchSearch = aoiEntry.watershed_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        aoiEntry.district.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchState = selectedState === 'all' || aoiEntry.state === selectedState;
+      if (matchSearch && matchState) {
+        return [aoiEntry, ...filtered];
+      }
+    }
+    return filtered;
+  }, [rankings, searchTerm, selectedState, selectedBasin, sortBy, aoiEntry]);
 
   const getPriorityBadge = (category: string) => {
     switch (category) {
@@ -412,6 +452,17 @@ export const RankingsTab: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
+              {isLoadingRankings && rankings.length === 0 && (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    {Array.from({ length: 9 }).map((__, j) => (
+                      <td key={j} className="py-4 px-4">
+                        <div className="h-3 bg-slate-800 rounded w-3/4" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
               {filteredAndSortedRankings.map((ws) => {
                 const isSelected = activeArea?.id === ws.id || activeArea?.code === ws.watershed_code;
                 const soilLoss = Math.round((ws.overall_score / 100) ** 1.8 * 45 * 10) / 10;
@@ -427,10 +478,18 @@ export const RankingsTab: React.FC = () => {
                     key={ws.id}
                     onClick={() => selectWatershed(ws)}
                     className={`cursor-pointer transition-colors ${
-                      isSelected ? 'bg-emerald-500/10 hover:bg-emerald-500/15' : 'hover:bg-slate-800/40'
+                      ws.rank_position === 0 && ws.watershed_code === (activeArea?.code || 'LIVE-AOI')
+                        ? 'bg-cyan-500/10 border-l-2 border-cyan-400 hover:bg-cyan-500/15'
+                        : isSelected ? 'bg-emerald-500/10 hover:bg-emerald-500/15' : 'hover:bg-slate-800/40'
                     }`}
                   >
-                    <td className="py-3.5 px-4 font-bold text-white">#{ws.rank_position}</td>
+                    <td className="py-3.5 px-4 font-bold text-white">
+                      {ws.rank_position === 0 ? (
+                        <span className="text-cyan-400 text-[10px] font-black uppercase tracking-wider">LIVE</span>
+                      ) : (
+                        `#${ws.rank_position}`
+                      )}
+                    </td>
                     <td className="py-3.5 px-4 font-semibold text-white flex items-center gap-2">
                       {isSelected && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
                       <span>{ws.watershed_name}</span>

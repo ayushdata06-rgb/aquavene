@@ -22,7 +22,6 @@ import {
   Bar,
   AreaChart,
   Area,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -227,32 +226,39 @@ export const TerrainHealthTab: React.FC = () => {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
               <XAxis dataKey="distance_km" stroke="#64748b" tick={{ fontSize: 11 }} unit=" km" />
-              <YAxis yAxisId="elev" stroke="#38bdf8" tick={{ fontSize: 11 }} unit=" m" domain={['auto', 'auto']} />
-              <YAxis yAxisId="flow" orientation="right" stroke="#10b981" tick={{ fontSize: 11 }} unit=" m³/s" />
+              {activeProfileMode === 'elevation' ? (
+                <YAxis yAxisId="active" stroke="#38bdf8" tick={{ fontSize: 11 }} unit=" m" domain={['auto', 'auto']} />
+              ) : (
+                <YAxis yAxisId="active" stroke="#10b981" tick={{ fontSize: 11 }} unit=" m³/s" />
+              )}
               <Tooltip
                 contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.75rem', fontSize: '12px' }}
                 labelFormatter={(v) => `Distance along stream: ${v} km`}
               />
               <Legend verticalAlign="top" height={36} />
-              <Area
-                yAxisId="elev"
-                type="monotone"
-                dataKey="elevation_m"
-                stroke="#38bdf8"
-                strokeWidth={2.5}
-                fillOpacity={1}
-                fill="url(#terrainGradient)"
-                name="Terrain Bed Elevation (m)"
-              />
-              <Line
-                yAxisId="flow"
-                type="monotone"
-                dataKey="flow_m3s"
-                stroke="#10b981"
-                strokeWidth={2.5}
-                dot={{ r: 4, fill: '#10b981' }}
-                name="Accumulated Flow Discharge (m³/s)"
-              />
+              {activeProfileMode === 'elevation' ? (
+                <Area
+                  yAxisId="active"
+                  type="monotone"
+                  dataKey="elevation_m"
+                  stroke="#38bdf8"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#terrainGradient)"
+                  name="Terrain Bed Elevation (m)"
+                />
+              ) : (
+                <Area
+                  yAxisId="active"
+                  type="monotone"
+                  dataKey="flow_m3s"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#flowGradient)"
+                  name="Accumulated Flow Discharge (m³/s)"
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
